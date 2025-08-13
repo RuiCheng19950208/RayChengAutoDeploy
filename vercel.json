@@ -1,7 +1,7 @@
 {
     "version": 2,
-    "buildCommand": "npm ci && npm run build",
-    "outputDirectory": "build",
+    "buildCommand": "cd ray_cheng_frontend && npm ci && npm run build",
+    "outputDirectory": "ray_cheng_frontend/build",
     "rewrites": [
       { "source": "/(.*)", "destination": "/index.html" }
     ]
