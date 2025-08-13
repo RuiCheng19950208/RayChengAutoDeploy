@@ -5,20 +5,16 @@
       "src": "ray_cheng_frontend/package.json",
       "use": "@vercel/static-build",
       "config": {
-        "distDir": "ray_cheng_frontend/build"
+        "distDir": "build"
       }
     }
   ],
   "routes": [
     {
-      "src": "/static/(.*)",
-      "dest": "/ray_cheng_frontend/static/$1"
-    },
-    {
       "src": "/(.*)",
-      "dest": "/ray_cheng_frontend/index.html"
+      "dest": "/index.html"
     }
   ],
-  "buildCommand": "cd ray_cheng_frontend && npm run build",
+  "buildCommand": "cd ray_cheng_frontend && npm install && npm run build",
   "outputDirectory": "ray_cheng_frontend/build"
 }
