@@ -52,7 +52,7 @@ function App() {
       <div className="App">
         <div className="dashboard">
           <header className="dashboard-header">
-            <h1>Task Management System</h1>
+            <h1>Ray Cheng Task Management System</h1>
             <div className="user-info">
               <span>Welcome, {user}!</span>
               <button onClick={handleLogout} className="logout-button">
@@ -62,7 +62,7 @@ function App() {
           </header>
           <main className="dashboard-content">
             <h2>Dashboard</h2>
-            <p>Login successful! This is the main interface of the Task Management System.</p>
+            <p>Login successful! Greeting {user}, do you like Ray Cheng's Full Stack system? DM him and tell him you love it :)</p>
             <p>Features under development...</p>
           </main>
         </div>

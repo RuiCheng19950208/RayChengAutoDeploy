@@ -35,7 +35,7 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onSwitchToLogin }) => {
 		<div className="login-container">
 			<div className="login-card">
 				<div className="login-header">
-					<h1>Task Management System</h1>
+					<h1>Ray Cheng Task Management System</h1>
 					<p>Create a new account</p>
 				</div>
 
