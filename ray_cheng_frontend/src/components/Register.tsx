@@ -16,11 +16,11 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onSwitchToLogin }) => {
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 		if (!username.trim() || !password.trim() || !passwordConfirm.trim()) {
-			alert('请填写必填项');
+			alert('Please fill in all required fields');
 			return;
 		}
 		if (password !== passwordConfirm) {
-			alert('两次密码输入不一致');
+			alert('Passwords do not match');
 			return;
 		}
 		try {
@@ -35,54 +35,54 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onSwitchToLogin }) => {
 		<div className="login-container">
 			<div className="login-card">
 				<div className="login-header">
-					<h1>任务管理系统</h1>
-					<p>创建一个新账户</p>
+					<h1>Task Management System</h1>
+					<p>Create a new account</p>
 				</div>
 
 				<form onSubmit={handleSubmit} className="login-form">
 					<div className="form-group">
-						<label htmlFor="username">用户名</label>
+						<label htmlFor="username">Username</label>
 						<input
 							type="text"
 							id="username"
 							value={username}
 							onChange={(e) => setUsername(e.target.value)}
-							placeholder="请输入用户名"
+							placeholder="Enter username"
 							required
 						/>
 					</div>
 
 					<div className="form-group">
-						<label htmlFor="email">邮箱（可选）</label>
+						<label htmlFor="email">Email (Optional)</label>
 						<input
 							type="email"
 							id="email"
 							value={email}
 							onChange={(e) => setEmail(e.target.value)}
-							placeholder="请输入邮箱"
+							placeholder="Enter email"
 						/>
 					</div>
 
 					<div className="form-group">
-						<label htmlFor="password">密码</label>
+						<label htmlFor="password">Password</label>
 						<input
 							type="password"
 							id="password"
 							value={password}
 							onChange={(e) => setPassword(e.target.value)}
-							placeholder="请输入密码"
+							placeholder="Enter password"
 							required
 						/>
 					</div>
 
 					<div className="form-group">
-						<label htmlFor="passwordConfirm">确认密码</label>
+						<label htmlFor="passwordConfirm">Confirm Password</label>
 						<input
 							type="password"
 							id="passwordConfirm"
 							value={passwordConfirm}
 							onChange={(e) => setPasswordConfirm(e.target.value)}
-							placeholder="请再次输入密码"
+							placeholder="Confirm password"
 							required
 						/>
 					</div>
@@ -92,12 +92,12 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onSwitchToLogin }) => {
 						className="login-button"
 						disabled={isLoading}
 					>
-						{isLoading ? '注册中...' : '注册'}
+						{isLoading ? 'Registering...' : 'Register'}
 					</button>
 				</form>
 
 				<div className="login-footer">
-					<p>已经有账户？ <button type="button" onClick={onSwitchToLogin} className="link-button">去登录</button></p>
+					<p>Already have an account? <button type="button" onClick={onSwitchToLogin} className="link-button">Go to Login</button></p>
 				</div>
 			</div>
 		</div>

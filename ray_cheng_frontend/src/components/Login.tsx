@@ -14,7 +14,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim() || !password.trim()) {
-      alert('请输入用户名和密码');
+      alert('Please enter username and password');
       return;
     }
     
@@ -30,31 +30,31 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => {
     <div className="login-container">
       <div className="login-card">
         <div className="login-header">
-          <h1>任务管理系统</h1>
-          <p>请登录您的账户</p>
+          <h1>Task Management System</h1>
+          <p>Please login to your account</p>
         </div>
         
         <form onSubmit={handleSubmit} className="login-form">
           <div className="form-group">
-            <label htmlFor="username">用户名</label>
+            <label htmlFor="username">Username</label>
             <input
               type="text"
               id="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="请输入用户名"
+              placeholder="Enter username"
               required
             />
           </div>
           
           <div className="form-group">
-            <label htmlFor="password">密码</label>
+            <label htmlFor="password">Password</label>
             <input
               type="password"
               id="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="请输入密码"
+              placeholder="Enter password"
               required
             />
           </div>
@@ -64,12 +64,12 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => {
             className="login-button"
             disabled={isLoading}
           >
-            {isLoading ? '登录中...' : '登录'}
+            {isLoading ? 'Logging in...' : 'Login'}
           </button>
         </form>
         
         <div className="login-footer">
-          <p>还没有账户？ <button type="button" onClick={onSwitchToRegister} className="link-button">立即注册</button></p>
+          <p>Don't have an account? <button type="button" onClick={onSwitchToRegister} className="link-button">Register Now</button></p>
         </div>
       </div>
     </div>
