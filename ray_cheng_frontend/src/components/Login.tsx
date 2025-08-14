@@ -2,27 +2,28 @@ import React, { useState } from 'react';
 import './Login.css';
 
 interface LoginProps {
-  onLogin: (username: string, password: string) => void;
+  onLogin: (username: string, password: string) => Promise<void> | void;
+  onSwitchToRegister: () => void;
 }
 
-const Login: React.FC<LoginProps> = ({ onLogin }) => {
+const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim() || !password.trim()) {
       alert('请输入用户名和密码');
       return;
     }
     
-    setIsLoading(true);
-    // 模拟登录过程
-    setTimeout(() => {
-      onLogin(username, password);
+    try {
+      setIsLoading(true);
+      await onLogin(username, password);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -68,7 +69,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         </form>
         
         <div className="login-footer">
-          <p>还没有账户？ <a href="#signup">立即注册</a></p>
+          <p>还没有账户？ <button type="button" onClick={onSwitchToRegister} className="link-button">立即注册</button></p>
         </div>
       </div>
     </div>

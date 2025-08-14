@@ -1,0 +1,33 @@
+# backend/docker-compose.yml
+version: "3.9"
+services:
+  db:
+    image: postgres:16
+    container_name: raycheng_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  backend:                    # 新增后端服务
+    build: .                  # 使用当前目录的 Dockerfile
+    container_name: raycheng_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+psycopg://postgres:postgres@db:5432/postgres
+      - JWT_SECRET_KEY=change-me
+      - JWT_EXPIRE_MINUTES=120
+    depends_on:
+      - db                    # 依赖数据库服务
+    volumes:
+      - .:/app               # 开发环境代码挂载（可选）
+
+volumes:
+  pg_data:
