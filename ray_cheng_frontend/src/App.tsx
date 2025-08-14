@@ -17,8 +17,8 @@ function App() {
       body: JSON.stringify({ username, password })
     });
     if (!resp.ok) {
-      const msg = await resp.json().catch(() => ({ detail: '登录失败' }));
-      alert(msg.detail || '登录失败');
+      const msg = await resp.json().catch(() => ({ detail: 'Login failed' }));
+      alert(msg.detail || 'Login failed');
       return;
     }
     const data = await resp.json();
@@ -34,11 +34,11 @@ function App() {
       body: JSON.stringify(payload)
     });
     if (!resp.ok) {
-      const msg = await resp.json().catch(() => ({ detail: '注册失败' }));
-      alert(msg.detail || '注册失败');
+      const msg = await resp.json().catch(() => ({ detail: 'Registration failed' }));
+      alert(msg.detail || 'Registration failed');
       return;
     }
-    alert('注册成功，请登录');
+    alert('Registration successful, please login');
     setShowRegister(false);
   };
 
@@ -52,18 +52,18 @@ function App() {
       <div className="App">
         <div className="dashboard">
           <header className="dashboard-header">
-            <h1>任务管理系统</h1>
+            <h1>Task Management System</h1>
             <div className="user-info">
-              <span>欢迎，{user}！</span>
+              <span>Welcome, {user}!</span>
               <button onClick={handleLogout} className="logout-button">
-                退出登录
+                Logout
               </button>
             </div>
           </header>
           <main className="dashboard-content">
-            <h2>仪表板</h2>
-            <p>登录成功！这里是任务管理系统的主界面。</p>
-            <p>功能开发中...</p>
+            <h2>Dashboard</h2>
+            <p>Login successful! This is the main interface of the Task Management System.</p>
+            <p>Features under development...</p>
           </main>
         </div>
       </div>
