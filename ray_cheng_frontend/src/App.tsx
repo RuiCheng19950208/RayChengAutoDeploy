@@ -1,17 +1,45 @@
 import React, { useState } from 'react';
 import './App.css';
 import Login from './components/Login';
+import Register from './components/Register';
+import { API_BASE_URL } from './config';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [user, setUser] = useState('');
 
-  const handleLogin = (username: string, password: string) => {
-    // 这里暂时只是模拟登录成功
-    console.log('登录信息:', { username, password });
+  const [showRegister, setShowRegister] = useState(false);
+
+  const handleLogin = async (username: string, password: string) => {
+    const resp = await fetch(`${API_BASE_URL}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    if (!resp.ok) {
+      const msg = await resp.json().catch(() => ({ detail: '登录失败' }));
+      alert(msg.detail || '登录失败');
+      return;
+    }
+    const data = await resp.json();
+    localStorage.setItem('access_token', data.access_token);
     setUser(username);
     setIsLoggedIn(true);
-    alert(`欢迎回来，${username}！`);
+  };
+
+  const handleRegister = async (payload: { username: string; email?: string; password: string; passwordConfirm: string }) => {
+    const resp = await fetch(`${API_BASE_URL}/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!resp.ok) {
+      const msg = await resp.json().catch(() => ({ detail: '注册失败' }));
+      alert(msg.detail || '注册失败');
+      return;
+    }
+    alert('注册成功，请登录');
+    setShowRegister(false);
   };
 
   const handleLogout = () => {
@@ -44,7 +72,11 @@ function App() {
 
   return (
     <div className="App">
-      <Login onLogin={handleLogin} />
+      {showRegister ? (
+        <Register onRegister={handleRegister} onSwitchToLogin={() => setShowRegister(false)} />
+      ) : (
+        <Login onLogin={handleLogin} onSwitchToRegister={() => setShowRegister(true)} />
+      )}
     </div>
   );
 }
