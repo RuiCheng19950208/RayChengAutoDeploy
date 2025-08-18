@@ -232,49 +232,25 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           
           canvas.width = targetWidth;
           canvas.height = targetHeight;
-          // 移动端全屏：使用dvh而不是vh，避免地址栏影响
-          // 先设置fallback值，再设置新标准
-          canvas.style.width = '100vw'; // fallback
-          canvas.style.height = '100vh'; // fallback
-          // 如果浏览器支持dvh，则使用dvh
-          if (CSS.supports('height', '100dvh')) {
-            canvas.style.width = '100dvw'; // 动态视口宽度
-            canvas.style.height = '100dvh'; // 动态视口高度，排除地址栏
-          }
-          canvas.style.maxWidth = 'none';
-          canvas.style.maxHeight = 'none';
-          canvas.style.minWidth = '100vw'; // fallback
-          canvas.style.minHeight = '100vh'; // fallback
-          if (CSS.supports('height', '100dvh')) {
-            canvas.style.minWidth = '100dvw';
-            canvas.style.minHeight = '100dvh';
-          }
-          canvas.style.objectFit = 'fill'; // 移动端完全填充
-          // 确保高分辨率生效
-          canvas.style.imageRendering = 'auto'; // 使用浏览器最佳渲染
-          // 移除padding，确保Canvas使用完整区域
-          canvas.style.padding = '0';
-          canvas.style.margin = '0';
-          canvas.style.boxSizing = 'content-box';
-          canvas.style.position = 'fixed';
-          canvas.style.top = '0';
-          canvas.style.left = '0';
-          canvas.style.zIndex = '10000';
+          // 移动端：移除所有样式设置，完全交给inline样式管理
+          // 避免resizeCanvas与inline样式的冲突，这是分辨率问题的根源
+          
+          console.log('🎮 Mobile Canvas Resolution Setup:', {
+            internalResolution: `${targetWidth}×${targetHeight}`,
+            note: 'CSS样式完全由inline styles管理，避免冲突'
+          });
           
           // 更新状态
           setCanvasResolution({ width: targetWidth, height: targetHeight });
           
-          console.log('🎮 Mobile fullscreen - Fixed Resolution Strategy:', {
+          console.log('🎮 Mobile fullscreen - No Conflicts Strategy:', {
             '📱 Physical Screen Size': `${screenWidth}×${screenHeight} CSS像素 (设备真实屏幕)`,
             '🔍 Device Pixel Ratio': devicePixelRatio,
             '📐 Physical Resolution': `${screenWidth * devicePixelRatio}×${screenHeight * devicePixelRatio} 物理像素`,
             '🎯 Game Render Resolution': `${targetWidth}×${targetHeight} (固定全高清质量)`,
-            '✨ 分离策略': '游戏分辨率与屏幕尺寸完全独立',
-            '🎨 Canvas CSS显示': {
-              width: canvas.style.width,
-              height: canvas.style.height,
-              objectFit: canvas.style.objectFit
-            }
+            '✅ 冲突解决': 'resizeCanvas不再设置CSS样式，避免与inline样式冲突',
+            '🎨 样式管理': '所有CSS样式统一由Canvas inline styles管理',
+            '🚀 分辨率策略': '内部渲染分辨率与CSS显示样式完全分离'
           });
           
           // 性能和质量指标
@@ -289,22 +265,17 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           canvas.width = targetWidth;
           canvas.height = targetHeight;
           
-          // 桌面端CSS样式设置
-          canvas.style.width = '100vw';
-          canvas.style.height = '100vh';
+          // 桌面端CSS样式设置 - 让Container处理定位，Canvas只负责填充
+          canvas.style.width = '100%';
+          canvas.style.height = '100%';
           canvas.style.maxWidth = 'none';
           canvas.style.maxHeight = 'none';
-          canvas.style.minWidth = '100vw';
-          canvas.style.minHeight = '100vh';
-          canvas.style.objectFit = 'contain'; // 桌面端保持比例
+          canvas.style.objectFit = 'contain'; // 桌面端保持比例，防止拉伸
           canvas.style.imageRendering = 'auto';
           canvas.style.padding = '0';
           canvas.style.margin = '0';
           canvas.style.boxSizing = 'content-box';
-          canvas.style.position = 'fixed';
-          canvas.style.top = '0';
-          canvas.style.left = '0';
-          canvas.style.zIndex = '10000';
+          canvas.style.display = 'block'; // 确保正常显示
           
           // 更新状态
           setCanvasResolution({ width: targetWidth, height: targetHeight });
@@ -317,8 +288,6 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
             '✨ 分离策略': '游戏分辨率与屏幕尺寸完全独立'
           });
         }
-        
-        canvas.style.position = 'static';  // 重置positioning，让容器处理定位
       } else {
         // Normal mode: restore original dimensions
         if (isMobile) {
@@ -510,20 +479,20 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
       const isLandscape = window.innerWidth > window.innerHeight;
       const aspectRatio = window.innerWidth / window.innerHeight;
       const isSmallScreen = window.innerWidth <= 1024; // 扩大检测范围到平板尺寸
-      
+
       console.log('Orientation check:', { 
-        isLandscape, 
-        isFullscreen, 
-        width: window.innerWidth, 
-        height: window.innerHeight,
+          isLandscape, 
+          isFullscreen, 
+          width: window.innerWidth, 
+          height: window.innerHeight,
         aspectRatio: aspectRatio.toFixed(2),
         isSmallScreen,
         isMobile,
-        unityLoaded: !!unityInstance,
+          unityLoaded: !!unityInstance,
         isGameLoaded,
-        currentFullscreenElement: !!document.fullscreenElement
-      });
-      
+          currentFullscreenElement: !!document.fullscreenElement
+        });
+        
       // 移动端设备在横屏时自动全屏，竖屏时退出全屏
       if (isMobile) {
         if (isLandscape && aspectRatio > 1.1 && !isFullscreen && unityInstance && isGameLoaded) {
@@ -869,27 +838,27 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
               imageRendering: 'pixelated',
             }),
             
-            // 全屏模式 - 简化且无冲突的设置
+            // 全屏模式 - 移动端和桌面端分别处理
             ...(isFullscreen && {
-              position: 'fixed',
+              border: 'none',
+              margin: 0,
+              padding: 0,
+              boxSizing: 'content-box',
+              imageRendering: 'auto',
+              
+              // 移动端：使用固定定位填充整个屏幕
+              ...(isMobile && {
+                position: 'fixed',
               top: 0,
               left: 0,
-              width: '100vw',
-              height: '100vh',
-              maxWidth: 'none',
-              maxHeight: 'none',
-              minWidth: '100vw',
-              minHeight: '100vh',
-              zIndex: 10000,
-              margin: 0,
-              padding: 0, // 明确设置为0，不使用安全区域padding
-              border: 'none',
-              objectFit: 'fill', // 强制填充整个区域
-              imageRendering: 'auto', // 高质量渲染
-              boxSizing: 'content-box', // 确保不被padding影响
-              
-              // 移动端特殊处理
-              ...(isMobile && {
+                width: '100vw',
+                height: '100vh',
+                maxWidth: 'none',
+                maxHeight: 'none',
+                minWidth: '100vw',
+                minHeight: '100vh',
+                zIndex: 10000,
+                objectFit: 'fill',
                 // 使用支持检测的dvh
                 ...(CSS.supports('height', '100dvh') && {
                   width: '100dvw',
@@ -901,6 +870,16 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
                 WebkitTouchCallout: 'none',
                 WebkitUserSelect: 'none',
                 WebkitTapHighlightColor: 'transparent',
+              }),
+              
+              // 桌面端：让Container居中，Canvas填充Container
+              ...(!isMobile && {
+                width: '100%',
+                height: '100%',
+                maxWidth: '100%',
+                maxHeight: '100%',
+                objectFit: 'contain', // 保持比例，避免拉伸
+                display: 'block'
               })
             })
           }}
