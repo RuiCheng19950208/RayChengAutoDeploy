@@ -209,9 +209,10 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           '🎯 用于计算': `${physicalScreenWidth}×${physicalScreenHeight} (真实物理分辨率)`
         });
         
-        // 使用真实物理分辨率进行计算
-        const screenWidth = physicalScreenWidth;
-        const screenHeight = physicalScreenHeight;
+        // 关键修复：使用CSS逻辑像素而不是物理像素
+        // CSS显示区域是逻辑像素，Canvas分辨率也应该基于逻辑像素
+        const screenWidth = cssScreenWidth;
+        const screenHeight = cssScreenHeight;
         
         // 物理分辨率仅用于日志显示
         // const actualWidth = Math.floor(screenWidth * devicePixelRatio);
@@ -243,24 +244,31 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           const baseWidth = 1920;
           const baseHeight = 1080;
           
+          // 重要：先计算基于CSS逻辑像素的尺寸，然后适度提升质量
+          const qualityScale = Math.min(devicePixelRatio, 2); // 最多2倍质量提升
+          
           if (isLandscape) {
-            // 横屏：保持游戏比例，适配到屏幕
+            // 横屏：保持游戏比例，适配到屏幕CSS尺寸
             if (deviceAspectRatio > gameAspectRatio) {
               // 设备更宽，以高度为准适配
-              targetHeight = Math.min(screenHeight, 1440);
-              targetWidth = Math.floor(targetHeight * gameAspectRatio);
-              console.log(`🔧 横屏适配 - 设备更宽: 高度${targetHeight} → 宽度${targetWidth}`);
+              const baseHeight = screenHeight;
+              const baseWidth = Math.floor(baseHeight * gameAspectRatio);
+              targetHeight = Math.floor(baseHeight * qualityScale);
+              targetWidth = Math.floor(baseWidth * qualityScale);
+              console.log(`🔧 横屏适配 - 设备更宽: CSS(${baseWidth}×${baseHeight}) → Canvas(${targetWidth}×${targetHeight})`);
             } else {
               // 设备较窄，以宽度为准适配  
-              targetWidth = Math.min(screenWidth, 2560);
-              targetHeight = Math.floor(targetWidth / gameAspectRatio);
-              console.log(`🔧 横屏适配 - 设备较窄: 宽度${targetWidth} → 高度${targetHeight}`);
+              const baseWidth = screenWidth;
+              const baseHeight = Math.floor(baseWidth / gameAspectRatio);
+              targetWidth = Math.floor(baseWidth * qualityScale);
+              targetHeight = Math.floor(baseHeight * qualityScale);
+              console.log(`🔧 横屏适配 - 设备较窄: CSS(${baseWidth}×${baseHeight}) → Canvas(${targetWidth}×${targetHeight})`);
             }
           } else {
             // 竖屏：使用竖屏适配的分辨率
-            targetWidth = baseHeight; // 1080
-            targetHeight = baseWidth; // 1920
-            console.log(`🔧 竖屏适配: ${targetWidth}×${targetHeight}`);
+            targetWidth = Math.floor(screenWidth * qualityScale);
+            targetHeight = Math.floor(screenHeight * qualityScale);
+            console.log(`🔧 竖屏适配: CSS(${screenWidth}×${screenHeight}) → Canvas(${targetWidth}×${targetHeight})`);
           }
           
           console.log(`📊 最终计算结果:`, {
@@ -296,15 +304,16 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           // 更新状态
           setCanvasResolution({ width: targetWidth, height: targetHeight });
           
-          console.log('🎮 Mobile fullscreen - Aspect Ratio Preserved Strategy:', {
+          console.log('🎮 Mobile fullscreen - CSS Matched Resolution Strategy:', {
             '📱 CSS逻辑像素': `${cssScreenWidth}×${cssScreenHeight}`,
             '🔍 Device Pixel Ratio': devicePixelRatio,
-            '🖥️ 设备分辨率': `${physicalScreenWidth}×${physicalScreenHeight}`,
+            '⚙️ Quality Scale': qualityScale,
             '🎯 Canvas分辨率': `${targetWidth}×${targetHeight}`,
+            '📊 分辨率比例': `${(targetWidth/cssScreenWidth).toFixed(2)}x CSS宽度, ${(targetHeight/cssScreenHeight).toFixed(2)}x CSS高度`,
             '📐 设备宽高比': deviceAspectRatio.toFixed(3),
             '🎮 游戏宽高比': gameAspectRatio.toFixed(3),
-            '✅ 宽高比保持': 'objectFit: contain 防止UI变形',
-            '🎨 显示效果': '正确比例的游戏画面，UI不变形'
+            '✅ 关键修复': 'Canvas分辨率基于CSS逻辑像素，应该能看到完整画面',
+            '🎨 预期效果': '完整游戏画面，UI居中显示'
           });
           
           // 性能和质量指标
