@@ -56,6 +56,7 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isGameLoaded, setIsGameLoaded] = useState(false);
+  const [canvasResolution, setCanvasResolution] = useState({ width: 960, height: 600 });
 
   // 检测移动设备
   useEffect(() => {
@@ -187,14 +188,34 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
       if (!canvas) return;
 
       if (isFullscreen) {
-        // Fullscreen: use full viewport dimensions and ensure canvas fills entire screen
+        // 获取设备的实际分辨率
+        const devicePixelRatio = window.devicePixelRatio || 1;
+        const screenWidth = window.innerWidth;
+        const screenHeight = window.innerHeight;
+        
+        // 计算实际的Canvas分辨率
+        const actualWidth = Math.floor(screenWidth * devicePixelRatio);
+        const actualHeight = Math.floor(screenHeight * devicePixelRatio);
+
         if (isMobile) {
-          // 移动端：填充整个屏幕
+          // 移动端：设置为设备实际分辨率
+          canvas.width = actualWidth;
+          canvas.height = actualHeight;
           canvas.style.width = '100vw';
           canvas.style.height = '100vh';
           canvas.style.maxWidth = 'none';
           canvas.style.maxHeight = 'none';
           canvas.style.objectFit = 'fill'; // 移动端完全填充
+          
+          // 更新状态
+          setCanvasResolution({ width: actualWidth, height: actualHeight });
+          
+          console.log('Mobile fullscreen canvas resolution:', {
+            cssSize: `${screenWidth}x${screenHeight}`,
+            canvasSize: `${actualWidth}x${actualHeight}`,
+            devicePixelRatio,
+            originalSize: '960x600'
+          });
         } else {
           // 桌面端：保持比例的同时尽可能大
           canvas.style.width = '100vw';
@@ -202,14 +223,29 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           canvas.style.maxWidth = 'none';
           canvas.style.maxHeight = 'none';
           canvas.style.objectFit = 'contain'; // 桌面端保持比例
+          
+          // 桌面端也可以提升分辨率，但保持游戏比例
+          const gameAspectRatio = 960 / 600;
+          let targetWidth, targetHeight;
+          
+          if (screenWidth / screenHeight > gameAspectRatio) {
+            // 屏幕更宽，以高度为准
+            targetHeight = Math.floor(screenHeight * devicePixelRatio);
+            targetWidth = Math.floor(targetHeight * gameAspectRatio);
+          } else {
+            // 屏幕更高，以宽度为准
+            targetWidth = Math.floor(screenWidth * devicePixelRatio);
+            targetHeight = Math.floor(targetWidth / gameAspectRatio);
+          }
+          
+          canvas.width = targetWidth;
+          canvas.height = targetHeight;
+          
+          // 更新状态
+          setCanvasResolution({ width: targetWidth, height: targetHeight });
         }
+        
         canvas.style.position = 'static';  // 重置positioning，让容器处理定位
-        console.log('Unity canvas resized for fullscreen:', { 
-          width: '100vw', 
-          height: '100vh',
-          isMobile,
-          viewportSize: `${window.innerWidth}x${window.innerHeight}`
-        });
       } else {
         // Normal mode: restore original dimensions
         if (isMobile) {
@@ -256,6 +292,9 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
             containerWidth: viewportWidth - 20
           });
         } else {
+          // 桌面端：恢复原始尺寸
+          canvas.width = 960;
+          canvas.height = 600;
           canvas.style.width = '960px';
           canvas.style.height = '600px';
           canvas.style.maxWidth = '960px';
@@ -263,7 +302,20 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
         }
         canvas.style.objectFit = 'contain'; // 保持比例
         canvas.style.position = 'static';  // 重置positioning
-        console.log('Unity canvas resized for normal mode');
+        
+        // 在非全屏模式下，恢复原始Canvas分辨率
+        if (!canvas.width || canvas.width === 0) {
+          canvas.width = 960;
+          canvas.height = 600;
+        }
+        
+        // 更新状态为原始分辨率
+        setCanvasResolution({ width: 960, height: 600 });
+        
+        console.log('Unity canvas resized for normal mode:', {
+          canvasSize: `${canvas.width}x${canvas.height}`,
+          cssSize: `${canvas.style.width} x ${canvas.style.height}`
+        });
       }
 
       // Force canvas reflow
@@ -271,11 +323,20 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
       
       // Notify Unity about canvas size change if possible
       try {
-        if ((window as any).unityGameInstance && (window as any).unityGameInstance.Module) {
-          (window as any).unityGameInstance.Module.setCanvasSize(
-            canvas.clientWidth, 
-            canvas.clientHeight
-          );
+        if ((window as any).unityGameInstance) {
+          // 通知Unity Canvas的内部分辨率变化
+          if ((window as any).unityGameInstance.Module && (window as any).unityGameInstance.Module.setCanvasSize) {
+            (window as any).unityGameInstance.Module.setCanvasSize(canvas.width, canvas.height);
+            console.log('Notified Unity of canvas resolution change:', {
+              width: canvas.width,
+              height: canvas.height
+            });
+          }
+          
+          // 如果有sendMessage方法，也通知Unity游戏逻辑
+          if ((window as any).unityGameInstance.SendMessage) {
+            (window as any).unityGameInstance.SendMessage('Main Camera', 'OnResolutionChanged', `${canvas.width}x${canvas.height}`);
+          }
         }
       } catch (err) {
         console.warn('Could not notify Unity about canvas resize:', err);
@@ -765,8 +826,8 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
               })
             })
           }}
-          width={960}
-          height={600}
+          width={canvasResolution.width}
+          height={canvasResolution.height}
         />
 
         {/* 全屏时的说明文字 */}
