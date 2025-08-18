@@ -3,12 +3,12 @@ from typing import Optional
 
 from jose import jwt
 from passlib.context import CryptContext
-from .settings import settings
+import os
 
 
-JWT_SECRET_KEY = settings.JWT_SECRET_KEY
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "dev-secret-change-me")
 JWT_ALGORITHM = "HS256"
-JWT_EXPIRE_MINUTES = settings.JWT_EXPIRE_MINUTES
+JWT_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "60"))
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

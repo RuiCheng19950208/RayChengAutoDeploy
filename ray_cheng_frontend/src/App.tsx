@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import './App.css';
 import Login from './components/Login';
 import Register from './components/Register';
+import Dashboard from './components/Dashboard';
 import { API_BASE_URL } from './config';
 
 function App() {
@@ -50,22 +51,7 @@ function App() {
   if (isLoggedIn) {
     return (
       <div className="App">
-        <div className="dashboard">
-          <header className="dashboard-header">
-            <h1>Ray Cheng Task Management System</h1>
-            <div className="user-info">
-              <span>Welcome, {user}!</span>
-              <button onClick={handleLogout} className="logout-button">
-                Logout
-              </button>
-            </div>
-          </header>
-          <main className="dashboard-content">
-            <h2>Dashboard</h2>
-            <p>Login successful! Greeting {user}, do you like Ray Cheng's Full Stack system? DM him and tell him you love it :)</p>
-            <p>Features under development...</p>
-          </main>
-        </div>
+        <Dashboard username={user} onLogout={handleLogout} />
       </div>
     );
   }
