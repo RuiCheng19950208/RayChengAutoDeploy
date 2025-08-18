@@ -339,14 +339,24 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           // 简化的分辨率策略：直接使用合理的固定分辨率
           let targetWidth, targetHeight;
           
-          if (isFullscreen) {
-            // 🚀 全屏模式：摆脱浏览器viewport限制，使用设备真实分辨率能力
-            // 关键修复：直接使用screen API判断横屏，不依赖viewport限制的值
+          // 🔧 关键修复：使用实际全屏状态，不依赖可能错误的React状态
+          const actuallyFullscreen = !!document.fullscreenElement;
+          const stateCorrect = isFullscreen === actuallyFullscreen;
+          
+          addDebugInfo(`🔍 状态检查: React全屏=${isFullscreen} 实际全屏=${actuallyFullscreen} 正确=${stateCorrect}`);
+          
+          // 🔧 如果状态不匹配，先修复状态再计算分辨率
+          if (!stateCorrect) {
+            addDebugInfo(`🔧 修复状态不匹配`);
+            setIsFullscreen(actuallyFullscreen);
+          }
+          
+          if (actuallyFullscreen) {
+            // 🚀 真正的全屏模式：使用设备真实分辨率能力
             // eslint-disable-next-line no-restricted-globals
-            const isLandscapeMode = window.innerWidth > window.innerHeight; // 当前窗口是否横屏
+            const isLandscapeMode = window.innerWidth > window.innerHeight;
             
-            // 🔍 详细调试：追踪执行路径
-            addDebugInfo(`🚨 全屏模式: 横屏${isLandscapeMode} 窗口${window.innerWidth}×${window.innerHeight}`);
+            addDebugInfo(`🚨 真全屏模式: 横屏${isLandscapeMode} 窗口${window.innerWidth}×${window.innerHeight}`);
             
             if (isLandscapeMode) {
               // 🎮 横屏全屏：专用高分辨率策略
@@ -387,10 +397,20 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
             // 重要：全屏模式CSS策略
             addDebugInfo(`🎨 全屏CSS策略: objectFit=contain, 完全覆盖视口, 高质量缩放`);
           } else {
-            // 非全屏：基于窗口尺寸
-            targetWidth = Math.floor(cssDisplayWidth * 1.2);
-            targetHeight = Math.floor(cssDisplayHeight * 1.2);
-            addDebugInfo(`📱 移动端窗口: 使用${targetWidth}×${targetHeight}`);
+            // 🖥️ 非全屏窗口模式：确保横屏时有合适的高分辨率
+            const isLandscape = cssDisplayWidth > cssDisplayHeight;
+            
+            if (isLandscape) {
+              // 横屏窗口：使用较高的分辨率，确保比竖屏更清晰
+              targetWidth = Math.max(1280, Math.floor(cssDisplayWidth * 1.5)); // 最少1280宽度
+              targetHeight = Math.max(720, Math.floor(cssDisplayHeight * 1.5));  // 最少720高度
+              addDebugInfo(`🖥️ 横屏窗口: ${targetWidth}×${targetHeight} (提升画质)`);
+            } else {
+              // 竖屏窗口：标准分辨率
+              targetWidth = Math.max(960, Math.floor(cssDisplayWidth * 1.2));   // 最少960宽度
+              targetHeight = Math.max(600, Math.floor(cssDisplayHeight * 1.2)); // 最少600高度
+              addDebugInfo(`📱 竖屏窗口: ${targetWidth}×${targetHeight} (标准画质)`);
+            }
           }
           
           // 移动端简化完成
@@ -779,16 +799,22 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           
           addDebugInfo(`❌ 横屏但未触发全屏: 比例${aspectRatio.toFixed(2)}>1.1? ${aspectRatio > 1.1} 非全屏? ${!isFullscreen} Unity? ${!!unityInstance} 加载? ${isGameLoaded}`);
           
-          // 🚨 如果状态不匹配，强制修复
+          // 🚨 状态修复：避免反复刷新
           if (!stateMatches) {
-            addDebugInfo(`🔧 状态不匹配修复: isFullscreen=${isFullscreen} 实际=${actuallyFullscreen}`);
-            setIsFullscreen(actuallyFullscreen);
+            addDebugInfo(`🔧 状态不匹配: React=${isFullscreen} 实际=${actuallyFullscreen}`);
             
-            // 如果实际不是全屏，但状态认为是全屏，强制进入全屏
-            if (!actuallyFullscreen && isFullscreen) {
-              addDebugInfo(`🚀 强制进入全屏模式`);
-              setTimeout(() => enterFullscreen(), 100);
+            // 只修复状态，不强制触发全屏（避免无限循环）
+            if (actuallyFullscreen && !isFullscreen) {
+              // 实际已全屏，但React状态落后，更新状态
+              addDebugInfo(`📝 更新状态为全屏`);
+              setIsFullscreen(true);
+            } else if (!actuallyFullscreen && isFullscreen) {
+              // 实际未全屏，但React状态认为已全屏，更新状态
+              addDebugInfo(`📝 更新状态为非全屏`);
+              setIsFullscreen(false);
             }
+            
+            // 🚫 移除强制进入全屏的逻辑，避免反复刷新
           }
         }
       }
