@@ -75,6 +75,52 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
+  // Unity Canvas resize when fullscreen changes
+  useEffect(() => {
+    if (!unityInstance || !canvasRef.current) return;
+
+    const resizeCanvas = () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      if (isFullscreen) {
+        // Fullscreen: use full viewport dimensions
+        canvas.style.width = '100vw';
+        canvas.style.height = '100vh';
+        console.log('Unity canvas resized for fullscreen:', { width: '100vw', height: '100vh' });
+      } else {
+        // Normal mode: restore original dimensions
+        if (isMobile) {
+          canvas.style.width = '100%';
+          canvas.style.height = 'auto';
+        } else {
+          canvas.style.width = '960px';
+          canvas.style.height = '600px';
+        }
+        console.log('Unity canvas resized for normal mode');
+      }
+
+      // Force canvas reflow
+      canvas.offsetHeight;
+      
+      // Notify Unity about canvas size change if possible
+      try {
+        if ((window as any).unityGameInstance && (window as any).unityGameInstance.Module) {
+          (window as any).unityGameInstance.Module.setCanvasSize(
+            canvas.clientWidth, 
+            canvas.clientHeight
+          );
+        }
+      } catch (err) {
+        console.warn('Could not notify Unity about canvas resize:', err);
+      }
+    };
+
+    // Delay resize to ensure DOM updates are complete
+    const timeoutId = setTimeout(resizeCanvas, 100);
+    return () => clearTimeout(timeoutId);
+  }, [isFullscreen, isMobile, unityInstance]);
+
   // 全屏功能
   const enterFullscreen = useCallback(async () => {
     if (!containerRef.current) return;
@@ -132,7 +178,14 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
     const handleOrientationChange = () => {
       setTimeout(() => {
         const isLandscape = window.innerWidth > window.innerHeight;
-        console.log('Mobile orientation change detected:', { isLandscape, isFullscreen, width: window.innerWidth, height: window.innerHeight });
+        console.log('Mobile orientation change detected:', { 
+          isLandscape, 
+          isFullscreen, 
+          width: window.innerWidth, 
+          height: window.innerHeight,
+          unityLoaded: !!unityInstance,
+          currentFullscreenElement: !!document.fullscreenElement
+        });
         
         // Auto fullscreen on landscape, auto exit on portrait for mobile
         if (isLandscape && !isFullscreen && unityInstance) {
@@ -208,6 +261,9 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
               setUnityInstance(instance);
               setIsLoading(false);
               console.log('Unity game loaded successfully');
+              
+              // Store instance for resizing
+              (window as any).unityGameInstance = instance;
             }
           } catch (err) {
             if (isMounted) {
@@ -400,13 +456,13 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           id="unity-canvas"
           style={{
             // Mobile portrait: fit to screen width, maintain aspect ratio
-            // Mobile landscape: fullscreen
+            // Mobile landscape: true fullscreen
             // Desktop: fixed size or fullscreen
             width: isFullscreen 
-              ? (isMobile ? '100vh' : '100vw') 
+              ? '100vw'  // Always use viewport width for fullscreen
               : (isMobile ? '100%' : '960px'),
             height: isFullscreen 
-              ? (isMobile ? '100vw' : '100vh') 
+              ? '100vh'  // Always use viewport height for fullscreen
               : (isMobile ? 'auto' : '600px'),
             maxWidth: isFullscreen 
               ? 'none' 
@@ -422,9 +478,12 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
             // 防止浏览器默认的触摸行为
             touchAction: 'none',
             userSelect: 'none',
-            // 全屏时居中
+            // 全屏时填充整个屏幕
             ...(isFullscreen && {
-              objectFit: 'contain'
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              objectFit: 'fill'  // 填充整个容器，不保持比例
             })
           }}
           width={960}
