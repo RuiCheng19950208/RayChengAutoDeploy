@@ -256,30 +256,43 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           canvas.style.objectFit = 'fill'; // 移动端完全填充
           // 确保高分辨率生效
           canvas.style.imageRendering = 'auto'; // 使用浏览器最佳渲染
-          // 处理安全区域
-          canvas.style.paddingTop = 'env(safe-area-inset-top, 0)';
-          canvas.style.paddingBottom = 'env(safe-area-inset-bottom, 0)';
-          canvas.style.paddingLeft = 'env(safe-area-inset-left, 0)';
-          canvas.style.paddingRight = 'env(safe-area-inset-right, 0)';
-          canvas.style.boxSizing = 'border-box';
+          // 移除padding，确保Canvas使用完整区域
+          canvas.style.padding = '0';
+          canvas.style.margin = '0';
+          canvas.style.boxSizing = 'content-box';
+          canvas.style.position = 'fixed';
+          canvas.style.top = '0';
+          canvas.style.left = '0';
+          canvas.style.zIndex = '10000';
           
           // 更新状态
           setCanvasResolution({ width: targetWidth, height: targetHeight });
           
-          console.log('Mobile fullscreen canvas resolution (1440p standard):', {
-            cssSize: `${screenWidth}x${screenHeight}`,
-            devicePixelRatio,
-            baseSize: `${baseWidth}x${baseHeight}`,
-            finalSize: `${targetWidth}x${targetHeight}`,
-            minStandard: `${minWidth}x${minHeight}`,
-            maxLimit: `${maxWidth}x${maxHeight}`,
-            cssStyle: {
+          console.log('🎮 Mobile fullscreen canvas resolution:', {
+            '📱 Screen CSS Size': `${screenWidth}x${screenHeight}`,
+            '🔍 Device Pixel Ratio': devicePixelRatio,
+            '📐 Physical Resolution': `${screenWidth * devicePixelRatio}x${screenHeight * devicePixelRatio}`,
+            '🎯 Canvas Internal Resolution': `${targetWidth}x${targetHeight}`,
+            '📊 Quality Ratio': `${(targetWidth/screenWidth).toFixed(2)}x scaling`,
+            '💾 Min Standard': `${minWidth}x${minHeight}`,
+            '⚡ Max Limit': `2560x1440`,
+            '🎨 Canvas CSS': {
               width: canvas.style.width,
               height: canvas.style.height,
-              maxWidth: canvas.style.maxWidth,
-              maxHeight: canvas.style.maxHeight
+              padding: canvas.style.padding,
+              boxSizing: canvas.style.boxSizing,
+              objectFit: canvas.style.objectFit
+            },
+            '🔧 Canvas Attributes': {
+              width: canvas.width,
+              height: canvas.height
             }
           });
+          
+          // 额外的性能指标
+          const pixelCount = targetWidth * targetHeight;
+          const megaPixels = (pixelCount / 1000000).toFixed(2);
+          console.log(`🚀 Total pixels: ${pixelCount.toLocaleString()} (${megaPixels}MP)`);
         } else {
           // 桌面端：严格限制最大分辨率为1920x1080，保持游戏比例
           canvas.style.width = '100vw';
@@ -869,70 +882,54 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           ref={canvasRef}
           id="unity-canvas"
           style={{
-            // Mobile portrait: fit to screen width, maintain aspect ratio
-            // Mobile landscape: true fullscreen
-            // Desktop: fixed size or fullscreen
-            width: isFullscreen 
-              ? (isMobile ? '100dvw' : '100vw')  // 移动端使用动态视口，桌面端使用标准视口
-              : (isMobile ? '100%' : '960px'), // 移动端使用100%让容器控制尺寸
-            height: isFullscreen 
-              ? (isMobile ? '100dvh' : '100vh')  // 移动端使用动态视口高度
-              : (isMobile ? 'auto' : '600px'),
-            maxWidth: isFullscreen 
-              ? 'none' 
-              : (isMobile ? '100%' : '960px'),
-            maxHeight: isFullscreen 
-              ? 'none' 
-              : 'none', // 让高度自动计算
-            // 关键：确保Canvas不被父容器限制
-            minWidth: isFullscreen ? (isMobile ? '100dvw' : '100vw') : 'auto',
-            minHeight: isFullscreen ? (isMobile ? '100dvh' : '100vh') : 'auto',
-            // 移动端全屏时处理安全区域
-            ...(isFullscreen && isMobile && {
-              paddingTop: 'env(safe-area-inset-top, 0)',
-              paddingBottom: 'env(safe-area-inset-bottom, 0)',
-              paddingLeft: 'env(safe-area-inset-left, 0)',
-              paddingRight: 'env(safe-area-inset-right, 0)',
-              boxSizing: 'border-box'
-            }),
+            // 基础样式
             background: '#231F20',
             display: error ? 'none' : 'block',
-            border: isFullscreen ? 'none' : '1px solid #444',
-            // 确保Canvas不被缩放，在全屏时使用最佳渲染
-            imageRendering: isFullscreen ? 'auto' : 'pixelated',
-            // 防止浏览器默认的触摸行为
             touchAction: 'none',
             userSelect: 'none',
-            // 确保Canvas居中且不溢出
-            margin: '0 auto',
-            // 全屏时填充整个屏幕
+            
+            // 非全屏模式
+            ...(!isFullscreen && {
+              width: isMobile ? '100%' : '960px',
+              height: isMobile ? 'auto' : '600px',
+              maxWidth: isMobile ? '100%' : '960px',
+              border: '1px solid #444',
+              margin: '0 auto',
+              imageRendering: 'pixelated',
+            }),
+            
+            // 全屏模式 - 简化且无冲突的设置
             ...(isFullscreen && {
+              position: 'fixed',
+              top: 0,
+              left: 0,
               width: '100vw',
               height: '100vh',
               maxWidth: 'none',
               maxHeight: 'none',
-              objectFit: isMobile ? 'fill' : 'contain',  // 移动端填充，桌面端保持比例
-              // 移动端沉浸式全屏样式
+              minWidth: '100vw',
+              minHeight: '100vh',
+              zIndex: 10000,
+              margin: 0,
+              padding: 0, // 明确设置为0，不使用安全区域padding
+              border: 'none',
+              objectFit: 'fill', // 强制填充整个区域
+              imageRendering: 'auto', // 高质量渲染
+              boxSizing: 'content-box', // 确保不被padding影响
+              
+              // 移动端特殊处理
               ...(isMobile && {
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                width: '100dvw !important',  // 强制使用动态视口宽度
-                height: '100dvh !important', // 强制使用动态视口高度
-                zIndex: 10000,
-                touchAction: 'manipulation', // 允许游戏内的触摸操作
-                WebkitTouchCallout: 'none', // iOS：禁用长按菜单
-                WebkitUserSelect: 'none',   // iOS：禁用文本选择
-                WebkitTapHighlightColor: 'transparent', // iOS：禁用点击高亮
-                msContentZooming: 'none',   // IE：禁用缩放
-                msTouchAction: 'manipulation', // IE：触摸操作
-                imageRendering: 'auto',  // 确保高分辨率渲染
-                // 处理安全区域边距
-                paddingTop: 'env(safe-area-inset-top, 0)',
-                paddingBottom: 'env(safe-area-inset-bottom, 0)',
-                paddingLeft: 'env(safe-area-inset-left, 0)',
-                paddingRight: 'env(safe-area-inset-right, 0)',
-                boxSizing: 'border-box'
+                // 使用支持检测的dvh
+                ...(CSS.supports('height', '100dvh') && {
+                  width: '100dvw',
+                  height: '100dvh',
+                  minWidth: '100dvw',
+                  minHeight: '100dvh',
+                }),
+                touchAction: 'manipulation',
+                WebkitTouchCallout: 'none',
+                WebkitUserSelect: 'none',
+                WebkitTapHighlightColor: 'transparent',
               })
             })
           }}
