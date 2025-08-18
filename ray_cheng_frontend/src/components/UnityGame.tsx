@@ -43,16 +43,27 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
              window.innerWidth <= 768;
     };
     
-    setIsMobile(checkMobile());
+    const mobile = checkMobile();
+    setIsMobile(mobile);
+    console.log('Mobile device detection result:', { 
+      mobile, 
+      userAgent: navigator.userAgent.toLowerCase(),
+      hasTouch: 'ontouchstart' in window,
+      windowWidth: window.innerWidth 
+    });
     
-    // 监听窗口大小变化
+    // Listen for window size changes
     const handleResize = () => {
-      setIsMobile(checkMobile());
+      const newMobile = checkMobile();
+      setIsMobile(newMobile);
+      console.log('Window size changed - mobile status:', newMobile);
     };
     
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+
 
   // 全屏状态监听
   useEffect(() => {
@@ -99,7 +110,7 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
     }
   }, []);
 
-  // ESC键和双击退出全屏
+  // ESC key to exit fullscreen (PC only)
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && isFullscreen) {
@@ -107,24 +118,40 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
       }
     };
 
-    const handleDoubleClick = (event: MouseEvent) => {
-      if (isFullscreen && event.target === canvasRef.current) {
-        exitFullscreen();
-      }
-    };
-
     document.addEventListener('keydown', handleKeyDown);
-    if (canvasRef.current) {
-      canvasRef.current.addEventListener('dblclick', handleDoubleClick);
-    }
 
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
-      if (canvasRef.current) {
-        canvasRef.current.removeEventListener('dblclick', handleDoubleClick);
-      }
     };
   }, [isFullscreen, exitFullscreen]);
+
+  // Mobile orientation change detection - auto exit fullscreen on portrait
+  useEffect(() => {
+    if (!isMobile) return;
+
+    const handleOrientationChange = () => {
+      setTimeout(() => {
+        const isLandscape = window.innerWidth > window.innerHeight;
+        console.log('Orientation change detected:', { isLandscape, isFullscreen, width: window.innerWidth, height: window.innerHeight });
+        
+        // Auto-fullscreen on landscape is disabled - user needs to manually click fullscreen button
+        // But auto-exit on portrait is enabled for better UX
+        if (!isLandscape && isFullscreen) {
+          console.log('Portrait detected, auto exiting fullscreen');
+          exitFullscreen();
+        }
+      }, 300);
+    };
+
+    // Monitor orientation changes
+    window.addEventListener('orientationchange', handleOrientationChange);
+    window.addEventListener('resize', handleOrientationChange);
+
+    return () => {
+      window.removeEventListener('orientationchange', handleOrientationChange);
+      window.removeEventListener('resize', handleOrientationChange);
+    };
+  }, [isMobile, isFullscreen, exitFullscreen]);
 
   useEffect(() => {
     let isMounted = true;
@@ -256,7 +283,7 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           borderRadius: '8px',
           marginBottom: '20px'
         }}>
-          <h3>❌ 游戏加载失败</h3>
+          <h3>❌ Game Loading Failed</h3>
           <p>{error}</p>
           <button 
             onClick={handleRetry}
@@ -270,7 +297,7 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
               fontWeight: 'bold'
             }}
           >
-            重试
+            Retry
           </button>
         </div>
       )}
@@ -283,7 +310,7 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           borderRadius: '8px',
           marginBottom: '20px'
         }}>
-          <h3>🎮 正在加载游戏...</h3>
+          <h3>🎮 Loading Game...</h3>
           <div style={{
             background: '#555',
             height: '20px',
@@ -326,8 +353,8 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           })
         }}
       >
-        {/* 全屏按钮 */}
-        {!isLoading && !error && unityInstance && (
+        {/* 全屏按钮 - 移动端和桌面端都显示 */}
+        {!error && (
           <button
             onClick={isFullscreen ? exitFullscreen : enterFullscreen}
             style={{
@@ -335,27 +362,31 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
               top: '10px',
               right: '10px',
               zIndex: 10000,
-              background: 'rgba(0, 0, 0, 0.7)',
+              background: 'rgba(0, 0, 0, 0.8)',
               color: 'white',
-              border: 'none',
-              borderRadius: '5px',
-              padding: '8px 12px',
+              border: '2px solid rgba(255, 255, 255, 0.3)',
+              borderRadius: '8px',
+              padding: isMobile ? '12px 16px' : '8px 12px',
               cursor: 'pointer',
-              fontSize: '14px',
+              fontSize: isMobile ? '16px' : '14px',
               display: 'flex',
               alignItems: 'center',
-              gap: '5px',
-              transition: 'background 0.3s ease'
+              gap: '6px',
+              transition: 'all 0.3s ease',
+              minWidth: isMobile ? '80px' : '60px',
+              fontWeight: 'bold'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(0, 0, 0, 0.9)';
+              e.currentTarget.style.background = 'rgba(0, 0, 0, 0.95)';
+              e.currentTarget.style.transform = 'scale(1.05)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(0, 0, 0, 0.7)';
+              e.currentTarget.style.background = 'rgba(0, 0, 0, 0.8)';
+              e.currentTarget.style.transform = 'scale(1)';
             }}
-            title={isFullscreen ? 'Exit Fullscreen (ESC or Double-click)' : `Enter Fullscreen ${isMobile ? '(Landscape)' : ''}`}
+            title={isFullscreen ? (isMobile ? 'Exit Fullscreen (Click or Rotate to Portrait)' : 'Exit Fullscreen (ESC or Click)') : `Enter Fullscreen${isMobile ? ' (Landscape)' : ''}`}
           >
-            {isFullscreen ? '⚫' : '⚪'}
+            {isFullscreen ? '❌' : '⛶'}
             {isFullscreen ? 'Exit' : 'Full'}
             {isMobile && !isFullscreen && ' 🔄'}
           </button>
@@ -394,14 +425,14 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
             left: '50%',
             transform: 'translateX(-50%)',
             color: 'rgba(255, 255, 255, 0.7)',
-            fontSize: '14px',
+            fontSize: isMobile ? '16px' : '14px',
             textAlign: 'center',
-            background: 'rgba(0, 0, 0, 0.5)',
-            padding: '8px 16px',
+            background: 'rgba(0, 0, 0, 0.6)',
+            padding: isMobile ? '10px 20px' : '8px 16px',
             borderRadius: '20px',
             pointerEvents: 'none'
           }}>
-            Press ESC or Double-click to exit fullscreen
+            {isMobile ? 'Rotate to portrait or click top-right button to exit fullscreen' : 'Press ESC key or click top-right button to exit fullscreen'}
           </div>
         )}
       </div>
@@ -414,10 +445,32 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           borderRadius: '8px',
           margin: '20px 0'
         }}>
-          <h3>🎮 准备加载游戏</h3>
-          <p>Unity WebGL游戏即将开始...</p>
+          <h3>🎮 Preparing Game</h3>
+          <p>Unity WebGL game will start soon...</p>
+          {isMobile && (
+            <p style={{ fontSize: '14px', color: '#aaa', marginTop: '10px' }}>
+              💡 Tip: Game supports landscape fullscreen mode
+            </p>
+          )}
         </div>
       )}
+
+      {/* Mobile Tips */}
+      {isMobile && !isLoading && !error && unityInstance && !isFullscreen && (
+        <div style={{
+          background: 'rgba(0, 123, 255, 0.1)',
+          border: '1px solid rgba(0, 123, 255, 0.3)',
+          color: '#007bff',
+          padding: '15px',
+          borderRadius: '8px',
+          margin: '15px 0',
+          fontSize: '14px'
+        }}>
+          📱 <strong>Mobile Tip:</strong> Click the fullscreen button or use landscape mode for best experience
+        </div>
+      )}
+
+
     </div>
   );
 };
