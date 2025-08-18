@@ -205,9 +205,8 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
         return;
       }
       
-      // 添加执行路径跟踪
-      addDebugInfo(`📍 开始分辨率设置流程`);
-      addDebugInfo(`📍 window.innerWidth:${window.innerWidth} innerHeight:${window.innerHeight}`);
+      // 关键信息：设备类型和窗口尺寸
+      addDebugInfo(`📍 设备:${isMobile ? '移动端' : '桌面端'} 窗口:${window.innerWidth}×${window.innerHeight}`);
 
       if (isFullscreen) {
         // 获取设备的实际物理屏幕分辨率
@@ -276,10 +275,8 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
         // const actualWidth = Math.floor(screenWidth * devicePixelRatio);
         // const actualHeight = Math.floor(screenHeight * devicePixelRatio);
 
-        addDebugInfo(`📍 准备进入分支判断: isMobile=${isMobile}`);
-        
         if (isMobile) {
-          addDebugInfo(`📍 进入移动端分支`);
+          addDebugInfo(`📱 执行移动端分辨率逻辑`);
           // 移动端：保持游戏原始宽高比，避免UI变形
           const isLandscape = screenWidth > screenHeight;
           
@@ -313,93 +310,22 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           const physicalDisplayWidth = cssDisplayWidth * devicePixelRatio;
           const physicalDisplayHeight = cssDisplayHeight * devicePixelRatio;
           
-          addDebugInfo(`🔧 CSS显示: ${cssDisplayWidth}×${cssDisplayHeight}, 物理显示: ${physicalDisplayWidth}×${physicalDisplayHeight}`);
-          
-          // 在全屏时，我们应该利用设备的真实显示能力
-          let effectiveDisplayWidth, effectiveDisplayHeight;
-          
-          if (isFullscreen) {
-            // 全屏时：使用物理显示能力，但限制在合理范围内
-            const maxWidth = 1920;
-            const maxHeight = 1080;
-            
-            // 按比例缩放物理分辨率到合理范围
-            const physicalRatio = physicalDisplayWidth / physicalDisplayHeight;
-            const targetRatio = Math.min(physicalRatio, 16/9); // 限制最大宽高比
-            
-            if (physicalDisplayWidth > maxWidth || physicalDisplayHeight > maxHeight) {
-              // 物理分辨率太高，按比例缩小到最大限制
-              const scaleX = maxWidth / physicalDisplayWidth;
-              const scaleY = maxHeight / physicalDisplayHeight;
-              const scale = Math.min(scaleX, scaleY);
-              
-              effectiveDisplayWidth = Math.floor(physicalDisplayWidth * scale);
-              effectiveDisplayHeight = Math.floor(physicalDisplayHeight * scale);
-              addDebugInfo(`🔧 物理分辨率过高，缩放到: ${effectiveDisplayWidth}×${effectiveDisplayHeight}`);
-            } else {
-              // 物理分辨率合理，直接使用
-              effectiveDisplayWidth = physicalDisplayWidth;
-              effectiveDisplayHeight = physicalDisplayHeight;
-              addDebugInfo(`🔧 使用物理分辨率: ${effectiveDisplayWidth}×${effectiveDisplayHeight}`);
-            }
-          } else {
-            // 非全屏时：使用CSS显示尺寸
-            effectiveDisplayWidth = cssDisplayWidth;
-            effectiveDisplayHeight = cssDisplayHeight;
-            addDebugInfo(`🔧 非全屏使用CSS尺寸: ${effectiveDisplayWidth}×${effectiveDisplayHeight}`);
-          }
-          
-          const displayWidth = effectiveDisplayWidth;
-          const displayHeight = effectiveDisplayHeight;
-          
-          // 智能分辨率策略：根据显示尺寸选择最优Canvas分辨率
+          // 简化的分辨率策略：直接使用合理的固定分辨率
           let targetWidth, targetHeight;
           
           if (isFullscreen) {
-            // 全屏模式：使用标准游戏分辨率，按比例适配
-            const gameResolutions = [
-              { width: 1920, height: 1080, name: "1080p" },
-              { width: 1280, height: 720,  name: "720p" },
-              { width: 960,  height: 540,  name: "540p" },
-              { width: 640,  height: 360,  name: "360p" }
-            ];
-            
-            // 选择最接近显示尺寸但不超过的分辨率
-            let selectedRes = gameResolutions[gameResolutions.length - 1]; // 默认最低分辨率
-            
-            for (const res of gameResolutions) {
-              if (res.width <= displayWidth * 1.5 && res.height <= displayHeight * 1.5) {
-                selectedRes = res;
-                break;
-              }
-            }
-            
-            targetWidth = selectedRes.width;
-            targetHeight = selectedRes.height;
-            
-            addDebugInfo(`🎮 选择${selectedRes.name}分辨率: ${targetWidth}×${targetHeight}`);
-            
-            // 如果选择的分辨率宽高比与显示区域差异太大，按比例调整
-            const gameRatio = targetWidth / targetHeight;
-            const displayRatio = displayWidth / displayHeight;
-            
-            if (Math.abs(gameRatio - displayRatio) > 0.3) {
-              if (displayRatio > gameRatio) {
-                // 显示更宽，以高度为准
-                targetWidth = Math.floor(targetHeight * displayRatio);
-              } else {
-                // 显示更高，以宽度为准
-                targetHeight = Math.floor(targetWidth / displayRatio);
-              }
-              addDebugInfo(`🔄 比例调整: ${targetWidth}×${targetHeight} (匹配显示比例${displayRatio.toFixed(2)})`);
-            }
+            // 全屏移动端：使用1280×720，确保性能和显示效果平衡
+            targetWidth = 1280;
+            targetHeight = 720;
+            addDebugInfo(`📱 移动端全屏: 使用${targetWidth}×${targetHeight}`);
           } else {
-            // 非全屏模式：直接基于显示尺寸，适度提升质量
-            const scale = Math.min(1.5, devicePixelRatio); // 最多1.5倍
-            targetWidth = Math.floor(displayWidth * scale);
-            targetHeight = Math.floor(displayHeight * scale);
-            addDebugInfo(`📱 非全屏: ${displayWidth}×${displayHeight} → ${targetWidth}×${targetHeight} (${scale}x)`);
+            // 非全屏：基于窗口尺寸
+            targetWidth = Math.floor(cssDisplayWidth * 1.2);
+            targetHeight = Math.floor(cssDisplayHeight * 1.2);
+            addDebugInfo(`📱 移动端窗口: 使用${targetWidth}×${targetHeight}`);
           }
+          
+          // 移动端简化完成
           
           console.log(`📊 最终计算结果:`, {
             orientation: isLandscape ? 'Landscape' : 'Portrait',
@@ -435,12 +361,12 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           // 更新状态
           setCanvasResolution({ width: targetWidth, height: targetHeight });
           
-          console.log('🎮 Mobile fullscreen - Multi-Device Strategy:', {
-            '📱 CSS显示区域': `${displayWidth}×${displayHeight}`,
+          console.log('🎮 Mobile Simplified Strategy:', {
+            '📱 CSS显示区域': `${cssDisplayWidth}×${cssDisplayHeight}`,
             '🔍 Device Pixel Ratio': devicePixelRatio,
-            '🎯 选择的Canvas分辨率': `${targetWidth}×${targetHeight}`,
-            '📊 分辨率比例': `${(targetWidth/displayWidth).toFixed(2)}x 显示宽度`,
-            '📐 显示区域宽高比': (displayWidth/displayHeight).toFixed(3),
+            '🎯 Canvas分辨率': `${targetWidth}×${targetHeight}`,
+            '📊 分辨率比例': `${(targetWidth/cssDisplayWidth).toFixed(2)}x CSS宽度`,
+            '📐 CSS宽高比': (cssDisplayWidth/cssDisplayHeight).toFixed(3),
             '🎮 Canvas宽高比': (targetWidth/targetHeight).toFixed(3),
             '✅ 多设备适配': '智能选择合适的游戏分辨率',
             '🎨 预期效果': '适合当前设备的完整游戏画面'
@@ -473,11 +399,11 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
             }
           }, 200);
         } else {
-          addDebugInfo(`📍 进入桌面端分支`);
+          addDebugInfo(`🖥️ 执行桌面端分辨率逻辑`);
           // 桌面端：固定使用1920×1080分辨率
           const targetWidth = 1920;
           const targetHeight = 1080;
-          addDebugInfo(`🖥️ 桌面端固定分辨率: ${targetWidth}×${targetHeight}`);
+          addDebugInfo(`🖥️ 桌面端设置: ${targetWidth}×${targetHeight}`);
           
           canvas.width = targetWidth;
           canvas.height = targetHeight;
