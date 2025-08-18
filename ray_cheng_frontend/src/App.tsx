@@ -133,10 +133,8 @@ function App() {
 
   const handleLogout = () => {
     localStorage.removeItem('access_token');
-    setIsLoggedIn(false);
-    setUser('');
-    setUserRole('user');
-    setShowAdmin(false);
+    // 强制刷新页面，自动重置所有状态
+    window.location.reload();
   };
 
   if (isLoggedIn) {
@@ -163,9 +161,17 @@ function App() {
   return (
     <div className="App">
       {showRegister ? (
-        <Register onRegister={handleRegister} onSwitchToLogin={() => setShowRegister(false)} />
+        <Register 
+          key="register-form"
+          onRegister={handleRegister} 
+          onSwitchToLogin={() => setShowRegister(false)} 
+        />
       ) : (
-        <Login onLogin={handleLogin} onSwitchToRegister={() => setShowRegister(true)} />
+        <Login 
+          key="login-form"
+          onLogin={handleLogin} 
+          onSwitchToRegister={() => setShowRegister(true)} 
+        />
       )}
     </div>
   );
