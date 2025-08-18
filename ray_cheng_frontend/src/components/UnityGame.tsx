@@ -191,7 +191,10 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
 
   // Unity Canvas resize when fullscreen changes
   useEffect(() => {
-    if (!unityInstance || !canvasRef.current) return;
+    if (!unityInstance || !canvasRef.current) {
+      addDebugInfo(`❌ resizeCanvas条件不满足: Unity:${!!unityInstance} Canvas:${!!canvasRef.current}`);
+      return;
+    }
 
     const resizeCanvas = () => {
       addDebugInfo(`🔥 resizeCanvas被调用! 全屏:${isFullscreen} 移动端:${isMobile} Unity:${!!unityInstance}`);
@@ -340,6 +343,28 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           const pixelCount = targetWidth * targetHeight;
           const megaPixels = (pixelCount / 1000000).toFixed(2);
           console.log(`🚀 Game rendering: ${pixelCount.toLocaleString()} pixels (${megaPixels}MP 全高清质量)`);
+          
+          // 移动端Unity覆盖检查
+          const expectedWidth = targetWidth;
+          const expectedHeight = targetHeight;
+          setTimeout(() => {
+            const currentWidth = canvas.width;
+            const currentHeight = canvas.height;
+            addDebugInfo(`🕐 Unity后检查: Canvas分辨率${currentWidth}×${currentHeight}`);
+            
+            // 如果Unity覆盖了我们的设置，强制重新设置
+            if (isFullscreen && isMobile && (currentWidth !== expectedWidth || currentHeight !== expectedHeight)) {
+              addDebugInfo(`🔧 Unity覆盖了分辨率，强制重新设置为${expectedWidth}×${expectedHeight}`);
+              canvas.width = expectedWidth;
+              canvas.height = expectedHeight;
+              setCanvasResolution({ width: expectedWidth, height: expectedHeight });
+              
+              // 再次检查
+              setTimeout(() => {
+                addDebugInfo(`🔍 强制设置后检查: ${canvas.width}×${canvas.height}`);
+              }, 50);
+            }
+          }, 200);
         } else {
           // 桌面端：固定使用1920×1080分辨率
           const targetWidth = 1920;
@@ -476,10 +501,7 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
         console.warn('❌ 通知Unity Canvas分辨率失败:', err);
       }
       
-      // 延迟检查Unity是否覆盖了我们的设置
-      setTimeout(() => {
-        addDebugInfo(`🕐 Unity后检查: Canvas分辨率${canvas.width}×${canvas.height}`);
-      }, 200);
+      // Unity覆盖检查已移到各分支内部
     };
 
     // Delay resize to ensure DOM updates are complete
@@ -489,7 +511,12 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
 
   // 全屏功能
   const enterFullscreen = useCallback(async () => {
-    if (!containerRef.current) return;
+    addDebugInfo(`🚀 enterFullscreen被调用! 当前isFullscreen:${isFullscreen}`);
+    
+    if (!containerRef.current) {
+      addDebugInfo(`❌ containerRef不存在，无法进入全屏`);
+      return;
+    }
     
     try {
       if (isMobile) {
@@ -525,8 +552,10 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
       }
       
       setIsFullscreen(true);
+      addDebugInfo(`✅ 全屏状态设置为true, 准备触发resizeCanvas`);
       console.log('Entered immersive fullscreen mode');
     } catch (err) {
+      addDebugInfo(`❌ 进入全屏失败: ${err instanceof Error ? err.message : String(err)}`);
       console.error('Failed to enter fullscreen:', err);
     }
   }, [isMobile]);
@@ -573,10 +602,13 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
   // Orientation change detection - auto fullscreen/exit based on orientation (for all devices)
   useEffect(() => {
     const checkAndHandleOrientation = () => {
-      const isLandscape = window.innerWidth > window.innerHeight;
+        const isLandscape = window.innerWidth > window.innerHeight;
       const aspectRatio = window.innerWidth / window.innerHeight;
       const isSmallScreen = window.innerWidth <= 1024; // 扩大检测范围到平板尺寸
 
+      addDebugInfo(`🔄 横屏检测: 横屏:${isLandscape} 比例:${aspectRatio.toFixed(2)} 移动端:${isMobile}`);
+      addDebugInfo(`🔄 条件检查: 全屏:${isFullscreen} Unity:${!!unityInstance} 游戏加载:${isGameLoaded}`);
+      
       console.log('Orientation check:', { 
           isLandscape, 
           isFullscreen, 
@@ -593,11 +625,15 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
       // 移动端设备在横屏时自动全屏，竖屏时退出全屏
       if (isMobile) {
         if (isLandscape && aspectRatio > 1.1 && !isFullscreen && unityInstance && isGameLoaded) {
+          addDebugInfo(`🚀 横屏触发自动全屏! 宽高比:${aspectRatio.toFixed(2)}`);
           console.log('Mobile landscape detected, auto entering fullscreen');
           enterFullscreen();
         } else if (!isLandscape && isFullscreen) {
+          addDebugInfo(`📱 竖屏触发退出全屏`);
           console.log('Mobile portrait detected, auto exiting fullscreen');
           exitFullscreen();
+        } else if (isLandscape) {
+          addDebugInfo(`❌ 横屏但未触发全屏: 比例${aspectRatio.toFixed(2)}>1.1? ${aspectRatio > 1.1} 非全屏? ${!isFullscreen} Unity? ${!!unityInstance} 加载? ${isGameLoaded}`);
         }
       }
       // 其他小屏设备（平板等）的处理
@@ -946,8 +982,8 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
                             // 移动端：使用固定定位填充整个屏幕，但保持游戏宽高比
               ...(isMobile && {
                 position: 'fixed',
-                top: 0,
-                left: 0,
+              top: 0,
+              left: 0,
                 width: '100vw',
                 height: '100vh',
                 maxWidth: 'none',
@@ -984,8 +1020,8 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           height={canvasResolution.height}
         />
 
-        {/* 调试信息面板 - 只在全屏和移动端显示 */}
-        {isFullscreen && isMobile && debugInfo.length > 0 && (
+        {/* 调试信息面板 - 移动端总是显示，帮助调试横屏自动全屏 */}
+        {isMobile && debugInfo.length > 0 && (
           <div style={{
             position: 'absolute',
             top: '10px',
@@ -1060,7 +1096,7 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
         </div>
       )}
 
-      {/* Mobile Tips */}
+      {/* Mobile Tips and Manual Fullscreen Button */}
       {isMobile && !isLoading && !error && unityInstance && !isFullscreen && (
         <div style={{
           background: 'rgba(0, 123, 255, 0.1)',
@@ -1072,6 +1108,25 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           fontSize: '14px'
         }}>
           📱 <strong>Mobile Tip:</strong> Rotate to landscape for automatic fullscreen mode and best gaming experience
+          
+          {/* 手动全屏按钮 - 用于调试 */}
+          <div style={{ marginTop: '10px' }}>
+            <button
+              onClick={enterFullscreen}
+              style={{
+                background: '#007bff',
+                color: 'white',
+                border: 'none',
+                padding: '10px 20px',
+                borderRadius: '5px',
+                fontSize: '14px',
+                cursor: 'pointer',
+                width: '100%'
+              }}
+            >
+              🔍 手动进入全屏 (调试用)
+            </button>
+          </div>
         </div>
       )}
 
