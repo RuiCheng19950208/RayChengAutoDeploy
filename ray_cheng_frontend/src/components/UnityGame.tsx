@@ -198,15 +198,33 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
         const actualHeight = Math.floor(screenHeight * devicePixelRatio);
 
         if (isMobile) {
-          // 移动端：严格限制最大分辨率为1920x1080，避免过度放大
+          // 移动端：以1440p标准为基准，确保高质量显示
           const maxWidth = 1920;
           const maxHeight = 1080;
+          const minWidth = 1440; // 最低1440p标准
+          const minHeight = 900; // 对应1440p的高度基准
           
-          // 使用CSS尺寸作为基准，不使用devicePixelRatio避免过度放大
-          let targetWidth = screenWidth;
-          let targetHeight = screenHeight;
+          // 计算目标分辨率：使用devicePixelRatio但限制在合理范围
+          let baseWidth = screenWidth;
+          let baseHeight = screenHeight;
           
-          // 如果超过最大限制，按比例缩小
+          // 如果CSS尺寸太小，按devicePixelRatio放大到1440p标准
+          if (baseWidth < minWidth || baseHeight < minHeight) {
+            // 使用devicePixelRatio提升到至少1440p
+            baseWidth = Math.max(screenWidth * devicePixelRatio, minWidth);
+            baseHeight = Math.max(screenHeight * devicePixelRatio, minHeight);
+          } else {
+            // CSS尺寸已经足够大，适度使用devicePixelRatio
+            const scaleFactor = Math.min(devicePixelRatio, 2); // 最多2倍放大
+            baseWidth = screenWidth * scaleFactor;
+            baseHeight = screenHeight * scaleFactor;
+          }
+          
+          // 确保不超过最大限制
+          let targetWidth = Math.min(baseWidth, maxWidth);
+          let targetHeight = Math.min(baseHeight, maxHeight);
+          
+          // 如果仍然超限，按比例缩小
           if (targetWidth > maxWidth || targetHeight > maxHeight) {
             const scaleX = maxWidth / targetWidth;
             const scaleY = maxHeight / targetHeight;
@@ -227,11 +245,13 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           // 更新状态
           setCanvasResolution({ width: targetWidth, height: targetHeight });
           
-          console.log('Mobile fullscreen canvas resolution (safe):', {
+          console.log('Mobile fullscreen canvas resolution (1440p standard):', {
             cssSize: `${screenWidth}x${screenHeight}`,
+            devicePixelRatio,
+            baseSize: `${baseWidth}x${baseHeight}`,
             finalSize: `${targetWidth}x${targetHeight}`,
-            maxLimit: `${maxWidth}x${maxHeight}`,
-            devicePixelRatio: devicePixelRatio
+            minStandard: `${minWidth}x${minHeight}`,
+            maxLimit: `${maxWidth}x${maxHeight}`
           });
         } else {
           // 桌面端：严格限制最大分辨率为1920x1080，保持游戏比例
