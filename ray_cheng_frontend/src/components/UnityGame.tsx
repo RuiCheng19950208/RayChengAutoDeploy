@@ -58,6 +58,7 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
   const [isGameLoaded, setIsGameLoaded] = useState(false);
   const [canvasResolution, setCanvasResolution] = useState({ width: 960, height: 600 });
   const [debugInfo, setDebugInfo] = useState<string[]>([]);
+  const [lastResizeTime, setLastResizeTime] = useState(0);
 
   // 优化调试信息显示，确保关键信息不丢失
   const addDebugInfo = (message: string) => {
@@ -209,6 +210,14 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
     }
 
     const resizeCanvas = () => {
+      // 🔧 防抖机制：避免频繁调用
+      const now = Date.now();
+      if (now - lastResizeTime < 200) { // 200ms内不重复执行
+        addDebugInfo(`⏱️ 防抖跳过: 距离上次${now - lastResizeTime}ms`);
+        return;
+      }
+      setLastResizeTime(now);
+      
       // 🔍 关键调试：检查状态和原因
       const actuallyFullscreen = !!document.fullscreenElement;
       const stateMatch = isFullscreen === actuallyFullscreen;
@@ -345,10 +354,9 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           
           addDebugInfo(`🔍 状态检查: React全屏=${isFullscreen} 实际全屏=${actuallyFullscreen} 正确=${stateCorrect}`);
           
-          // 🔧 如果状态不匹配，先修复状态再计算分辨率
+          // 🔧 状态不匹配时只记录，不在resizeCanvas中修复（避免useEffect循环）
           if (!stateCorrect) {
-            addDebugInfo(`🔧 修复状态不匹配`);
-            setIsFullscreen(actuallyFullscreen);
+            addDebugInfo(`⚠️ 状态不匹配: React=${isFullscreen} 实际=${actuallyFullscreen} (将在下次检查时修复)`);
           }
           
           if (actuallyFullscreen) {
@@ -666,7 +674,7 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
     // Delay resize to ensure DOM updates are complete
     const timeoutId = setTimeout(resizeCanvas, 100);
     return () => clearTimeout(timeoutId);
-  }, [isFullscreen, isMobile, unityInstance]);
+  }, [isFullscreen, isMobile, unityInstance, lastResizeTime]); // 添加lastResizeTime但不会造成循环
 
   // 全屏功能
   const enterFullscreen = useCallback(async () => {
