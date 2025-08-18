@@ -57,6 +57,16 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
   const [isMobile, setIsMobile] = useState(false);
   const [isGameLoaded, setIsGameLoaded] = useState(false);
   const [canvasResolution, setCanvasResolution] = useState({ width: 960, height: 600 });
+  const [debugInfo, setDebugInfo] = useState<string[]>([]);
+
+  // 添加调试信息到屏幕显示
+  const addDebugInfo = (message: string) => {
+    console.log(message); // 同时输出到控制台
+    setDebugInfo(prev => {
+      const newInfo = [...prev, `${new Date().toLocaleTimeString()}: ${message}`];
+      return newInfo.slice(-10); // 只保留最新的10条信息
+    });
+  };
 
   // 检测移动设备
   useEffect(() => {
@@ -184,8 +194,13 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
     if (!unityInstance || !canvasRef.current) return;
 
     const resizeCanvas = () => {
+      addDebugInfo(`🔥 resizeCanvas被调用! 全屏:${isFullscreen} 移动端:${isMobile} Unity:${!!unityInstance}`);
+      
       const canvas = canvasRef.current;
-      if (!canvas) return;
+      if (!canvas) {
+        console.log('❌ Canvas不存在，退出resizeCanvas');
+        return;
+      }
 
       if (isFullscreen) {
         // 获取设备的实际物理屏幕分辨率
@@ -232,13 +247,17 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           
           let targetWidth, targetHeight;
           
-          console.log(`📐 宽高比详细分析:`, {
-            device: `${deviceAspectRatio.toFixed(3)} (${screenWidth}×${screenHeight})`,
-            game: `${gameAspectRatio.toFixed(3)} (当前设置: 3:2)`,
-            isDeviceWider: deviceAspectRatio > gameAspectRatio,
-            difference: `${((deviceAspectRatio - gameAspectRatio) * 100).toFixed(1)}%`,
-            recommendation: deviceAspectRatio > gameAspectRatio ? '以高度为准适配' : '以宽度为准适配'
+          console.log(`🚨 调试信息 - 分辨率设置前:`, {
+            cssScreenSize: `${cssScreenWidth}×${cssScreenHeight}`,
+            physicalScreenSize: `${physicalScreenWidth}×${physicalScreenHeight}`,
+            devicePixelRatio: devicePixelRatio,
+            screenWidthUsed: screenWidth,
+            screenHeightUsed: screenHeight,
+            isLandscape: screenWidth > screenHeight,
+            currentCanvasSize: `${canvasRef.current?.width || 'unknown'}×${canvasRef.current?.height || 'unknown'}`
           });
+          
+          addDebugInfo(`📐 屏幕尺寸: ${screenWidth}×${screenHeight} 宽高比:${deviceAspectRatio.toFixed(2)}`);
           
           // 高质量基准分辨率
           const baseWidth = 1920;
@@ -291,15 +310,16 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           
           console.log(`📱 Mobile ${isLandscape ? 'Landscape' : 'Portrait'} mode: Using aspect-corrected ${targetWidth}×${targetHeight}`);
           
+          // 关键：设置Canvas内部分辨率
           canvas.width = targetWidth;
           canvas.height = targetHeight;
+          
+          // 立即验证设置是否生效
+          const settingSuccess = canvas.width === targetWidth && canvas.height === targetHeight;
+          addDebugInfo(`🚨 Canvas设置: 目标${targetWidth}×${targetHeight} 实际${canvas.width}×${canvas.height} 成功:${settingSuccess}`);
+          
           // 移动端：移除所有样式设置，完全交给inline样式管理
           // 避免resizeCanvas与inline样式的冲突，这是分辨率问题的根源
-          
-          console.log('🎮 Mobile Canvas Resolution Setup:', {
-            internalResolution: `${targetWidth}×${targetHeight}`,
-            note: 'CSS样式完全由inline styles管理，避免冲突'
-          });
           
           // 更新状态
           setCanvasResolution({ width: targetWidth, height: targetHeight });
@@ -426,13 +446,21 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
       // Force canvas reflow
       void canvas.offsetHeight;
       
+      // 在通知Unity前检查Canvas分辨率是否正确设置
+      console.log('🔍 通知Unity前的Canvas状态检查:', {
+        Canvas内部分辨率: `${canvas.width}×${canvas.height}`,
+        Canvas属性width: canvas.getAttribute('width'),
+        Canvas属性height: canvas.getAttribute('height'),
+        Unity实例: !!(window as any).unityGameInstance
+      });
+      
       // Notify Unity about canvas size change if possible
       try {
         if ((window as any).unityGameInstance) {
           // 通知Unity Canvas的内部分辨率变化
           if ((window as any).unityGameInstance.Module && (window as any).unityGameInstance.Module.setCanvasSize) {
             (window as any).unityGameInstance.Module.setCanvasSize(canvas.width, canvas.height);
-            console.log('Notified Unity of canvas resolution change:', {
+            console.log('✅ 已通知Unity Module Canvas分辨率:', {
               width: canvas.width,
               height: canvas.height
             });
@@ -441,11 +469,17 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           // 如果有sendMessage方法，也通知Unity游戏逻辑
           if ((window as any).unityGameInstance.SendMessage) {
             (window as any).unityGameInstance.SendMessage('Main Camera', 'OnResolutionChanged', `${canvas.width}x${canvas.height}`);
+            console.log('✅ 已通知Unity游戏逻辑分辨率变化');
           }
         }
       } catch (err) {
-        console.warn('Could not notify Unity about canvas resize:', err);
+        console.warn('❌ 通知Unity Canvas分辨率失败:', err);
       }
+      
+      // 延迟检查Unity是否覆盖了我们的设置
+      setTimeout(() => {
+        addDebugInfo(`🕐 Unity后检查: Canvas分辨率${canvas.width}×${canvas.height}`);
+      }, 200);
     };
 
     // Delay resize to ensure DOM updates are complete
@@ -949,6 +983,33 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           width={canvasResolution.width}
           height={canvasResolution.height}
         />
+
+        {/* 调试信息面板 - 只在全屏和移动端显示 */}
+        {isFullscreen && isMobile && debugInfo.length > 0 && (
+          <div style={{
+            position: 'absolute',
+            top: '10px',
+            left: '10px',
+            right: '10px',
+            background: 'rgba(0, 0, 0, 0.8)',
+            color: '#00ff00',
+            fontSize: '10px',
+            fontFamily: 'monospace',
+            padding: '8px',
+            borderRadius: '4px',
+            maxHeight: '200px',
+            overflow: 'auto',
+            zIndex: 10002,
+            pointerEvents: 'none'
+          }}>
+            <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>🔍 调试信息:</div>
+            {debugInfo.map((info, index) => (
+              <div key={index} style={{ marginBottom: '2px', fontSize: '9px' }}>
+                {info}
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* 全屏时的说明文字 */}
         {isFullscreen && (
