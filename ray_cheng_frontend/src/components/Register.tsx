@@ -48,6 +48,7 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onSwitchToLogin }) => {
 							value={username}
 							onChange={(e) => setUsername(e.target.value)}
 							placeholder="Enter username"
+							autoComplete="username"
 							required
 						/>
 					</div>
@@ -60,6 +61,7 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onSwitchToLogin }) => {
 							value={email}
 							onChange={(e) => setEmail(e.target.value)}
 							placeholder="Enter email"
+							autoComplete="email"
 						/>
 					</div>
 
@@ -71,6 +73,7 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onSwitchToLogin }) => {
 							value={password}
 							onChange={(e) => setPassword(e.target.value)}
 							placeholder="Enter password"
+							autoComplete="new-password"
 							required
 						/>
 					</div>
@@ -83,6 +86,7 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onSwitchToLogin }) => {
 							value={passwordConfirm}
 							onChange={(e) => setPasswordConfirm(e.target.value)}
 							placeholder="Confirm password"
+							autoComplete="new-password"
 							required
 						/>
 					</div>

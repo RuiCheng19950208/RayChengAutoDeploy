@@ -43,6 +43,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Enter username"
+              autoComplete="username"
               required
             />
           </div>
@@ -55,6 +56,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, onSwitchToRegister }) => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter password"
+              autoComplete="current-password"
               required
             />
           </div>

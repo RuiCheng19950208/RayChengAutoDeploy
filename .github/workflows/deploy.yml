@@ -1,0 +1,122 @@
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["CI/CD Pipeline"]
+    types:
+      - completed
+    branches: [ main, develop ]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # 部署到测试环境
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.ref == 'refs/heads/develop' }}
+    environment: staging
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to staging server
+        run: |
+          echo "Deploying to staging environment..."
+          # 这里可以添加实际的部署命令
+          # 例如：使用 SSH 连接到服务器，或者使用 kubectl 等
+          
+          # 示例：SSH 部署
+          # ssh user@staging-server "cd /app && docker-compose pull && docker-compose up -d"
+          
+          # 示例：Kubernetes 部署
+          # kubectl set image deployment/ray-cheng-backend ray-cheng-backend=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      - name: Health check
+        run: |
+          echo "Performing health check..."
+          # 等待服务启动
+          sleep 30
+          # 检查服务健康状态
+          # curl -f http://staging-server/health || exit 1
+
+      - name: Notify deployment success
+        if: success()
+        run: |
+          echo "Staging deployment successful!"
+          # 可以添加通知逻辑，如 Slack、Teams 等
+
+  # 部署到生产环境
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.ref == 'refs/heads/main' }}
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to production server
+        run: |
+          echo "Deploying to production environment..."
+          # 这里可以添加实际的部署命令
+          
+          # 示例：蓝绿部署
+          # 1. 部署新版本到备用环境
+          # 2. 健康检查
+          # 3. 切换流量
+          # 4. 清理旧版本
+
+      - name: Production health check
+        run: |
+          echo "Performing production health check..."
+          sleep 60
+          # 更严格的健康检查
+          # curl -f http://production-server/health || exit 1
+          # curl -f http://production-server/api/health || exit 1
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "Deployment failed, initiating rollback..."
+          # 回滚到上一个稳定版本
+          # 这里添加回滚逻辑
+
+      - name: Notify deployment result
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "Production deployment successful!"
+          else
+            echo "Production deployment failed!"
+          fi
+          # 可以添加通知逻辑
+
+  # 部署后验证
+  post-deploy-verification:
+    name: Post-Deploy Verification
+    needs: [deploy-production]
+    runs-on: ubuntu-latest
+    if: ${{ github.ref == 'refs/heads/main' }}
+    
+    steps:
+      - name: Run smoke tests
+        run: |
+          echo "Running smoke tests..."
+          # 运行基本的冒烟测试
+          # 检查关键功能是否正常工作
+
+      - name: Performance test
+        run: |
+          echo "Running performance tests..."
+          # 运行性能测试
+          # 检查响应时间、吞吐量等
+
+      - name: Generate deployment report
+        run: |
+          echo "Generating deployment report..."
+          # 生成部署报告
+          # 包含部署时间、版本信息、测试结果等

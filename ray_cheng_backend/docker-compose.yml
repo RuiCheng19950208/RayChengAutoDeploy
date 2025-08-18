@@ -21,7 +21,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql+psycopg://postgres:postgres@db:5432/postgres
+      - DATABASE_URL=postgresql+psycopg://postgres:postgres@db:5432/postgres # This is the link inside the container db:5432 is correct
       - JWT_SECRET_KEY=change-me
       - JWT_EXPIRE_MINUTES=120
     depends_on:

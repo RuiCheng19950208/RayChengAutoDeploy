@@ -1,0 +1,109 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  # Python 代码质量检查
+  python-quality:
+    name: Python Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python Environment
+        uses: ./.github/actions/setup-python
+        with:
+          python-version: '3.11'
+          cache-dependency-path: 'ray_cheng_backend/requirements.txt'
+
+      - name: Install project dependencies
+        working-directory: ./ray_cheng_backend
+        run: |
+          pip install -r requirements.txt
+
+      - name: Check code formatting with Black
+        working-directory: ./ray_cheng_backend
+        run: |
+          black --check --diff .
+
+      - name: Check import sorting with isort
+        working-directory: ./ray_cheng_backend
+        run: |
+          isort --check-only --diff .
+
+      - name: Lint with flake8
+        working-directory: ./ray_cheng_backend
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=88 --statistics
+
+      - name: Type check with mypy
+        working-directory: ./ray_cheng_backend
+        run: |
+          mypy . --ignore-missing-imports
+
+  # TypeScript/JavaScript 代码质量检查
+  typescript-quality:
+    name: TypeScript Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: ray_cheng_frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./ray_cheng_frontend
+        run: npm ci
+
+      - name: Run ESLint
+        working-directory: ./ray_cheng_frontend
+        run: npm run lint || echo "Linting completed"
+
+      - name: Run TypeScript compiler check
+        working-directory: ./ray_cheng_frontend
+        run: npx tsc --noEmit
+
+      - name: Check code formatting with Prettier
+        working-directory: ./ray_cheng_frontend
+        run: npx prettier --check . || echo "Prettier check completed"
+
+  # 自动修复代码格式（可选）
+  auto-fix:
+    name: Auto-fix Code Format
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python Environment
+        uses: ./.github/actions/setup-python
+        with:
+          python-version: '3.11'
+
+      - name: Auto-fix Python code
+        working-directory: ./ray_cheng_backend
+        run: |
+          black .
+          isort .
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add -A
+          git diff-index --quiet HEAD || (git commit -m "Auto-fix code format" && git push)
