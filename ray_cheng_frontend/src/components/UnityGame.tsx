@@ -292,7 +292,9 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           const debugInfo = {
             '🌐 window.innerWidth/Height': `${window.innerWidth}×${window.innerHeight}`,
             '📺 window.outerWidth/Height': `${window.outerWidth}×${window.outerHeight}`,
+            // eslint-disable-next-line no-restricted-globals
             '🖥️ screen.width/height': `${screen.width}×${screen.height}`,
+            // eslint-disable-next-line no-restricted-globals
             '📱 screen.availWidth/Height': `${screen.availWidth}×${screen.availHeight}`,
             '🔍 devicePixelRatio': devicePixelRatio,
             '📐 计算的物理分辨率': `${physicalScreenWidth}×${physicalScreenHeight}`,
@@ -303,13 +305,14 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           };
           
           console.log(`🚨 CSS逻辑像素异常调试:`, debugInfo);
+          // eslint-disable-next-line no-restricted-globals
           addDebugInfo(`🔍 CSS逻辑像素调试: inner${window.innerWidth}×${window.innerHeight} screen${screen.width}×${screen.height} ratio${devicePixelRatio}`);
           
           addDebugInfo(`📐 屏幕尺寸: ${screenWidth}×${screenHeight} 宽高比:${deviceAspectRatio.toFixed(2)}`);
           
-          // 高质量基准分辨率
-          const baseWidth = 1920;
-          const baseHeight = 1080;
+          // 注释：移除未使用的变量
+          // const baseWidth = 1920;
+          // const baseHeight = 1080;
           
           // 多设备适配策略：获取真实的全屏显示能力
           const cssDisplayWidth = window.innerWidth;   
@@ -636,7 +639,8 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
       addDebugInfo(`❌ 进入全屏失败: ${err instanceof Error ? err.message : String(err)}`);
       console.error('Failed to enter fullscreen:', err);
     }
-  }, [isMobile]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMobile]); // isFullscreen作为内部状态，不需要作为依赖
 
   const exitFullscreen = useCallback(async () => {
     try {
