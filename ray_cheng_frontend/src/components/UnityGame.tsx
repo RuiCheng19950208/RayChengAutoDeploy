@@ -218,30 +218,53 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
         // const actualHeight = Math.floor(screenHeight * devicePixelRatio);
 
         if (isMobile) {
-          // 移动端：使用真实物理分辨率，充分利用设备硬件能力
+          // 移动端：保持游戏原始宽高比，避免UI变形
           const isLandscape = screenWidth > screenHeight;
+          
+          // 游戏的标准宽高比（通常是16:9或16:10）
+          const gameAspectRatio = 16 / 9; // 1.78:1，可以根据游戏实际情况调整
+          const deviceAspectRatio = screenWidth / screenHeight;
           
           let targetWidth, targetHeight;
           
-          // 直接使用物理分辨率，但设置合理的上限
-          const maxWidth = 2560;  // 最大宽度限制
-          const maxHeight = 1440; // 最大高度限制
+          console.log(`📐 宽高比分析:`, {
+            device: `${deviceAspectRatio.toFixed(3)} (${screenWidth}×${screenHeight})`,
+            game: `${gameAspectRatio.toFixed(3)} (标准16:9)`,
+            needsAdjustment: Math.abs(deviceAspectRatio - gameAspectRatio) > 0.1
+          });
           
-          // 使用真实物理分辨率，但不超过最大限制
-          targetWidth = Math.min(screenWidth, maxWidth);
-          targetHeight = Math.min(screenHeight, maxHeight);
+          // 高质量基准分辨率
+          const baseWidth = 1920;
+          const baseHeight = 1080;
           
-          // 如果物理分辨率超限，按比例缩小
-          if (screenWidth > maxWidth || screenHeight > maxHeight) {
-            const scaleX = maxWidth / screenWidth;
-            const scaleY = maxHeight / screenHeight;
-            const scale = Math.min(scaleX, scaleY);
-            
-            targetWidth = Math.floor(screenWidth * scale);
-            targetHeight = Math.floor(screenHeight * scale);
+          if (isLandscape) {
+            // 横屏：保持游戏16:9比例，适配到屏幕
+            if (deviceAspectRatio > gameAspectRatio) {
+              // 设备更宽（如21:9屏幕），以高度为准适配
+              targetHeight = Math.min(screenHeight, 1440);
+              targetWidth = Math.floor(targetHeight * gameAspectRatio);
+            } else {
+              // 设备较窄，以宽度为准适配  
+              targetWidth = Math.min(screenWidth, 2560);
+              targetHeight = Math.floor(targetWidth / gameAspectRatio);
+            }
+          } else {
+            // 竖屏：使用竖屏适配的分辨率
+            targetWidth = baseHeight; // 1080
+            targetHeight = baseWidth; // 1920
           }
           
-          console.log(`📱 Mobile ${isLandscape ? 'Landscape' : 'Portrait'} mode: Using physical resolution ${targetWidth}×${targetHeight}`);
+          // 确保不超过设备能力和性能限制
+          const maxPixels = 2560 * 1440; // 最大像素数限制
+          const currentPixels = targetWidth * targetHeight;
+          
+          if (currentPixels > maxPixels) {
+            const scale = Math.sqrt(maxPixels / currentPixels);
+            targetWidth = Math.floor(targetWidth * scale);
+            targetHeight = Math.floor(targetHeight * scale);
+          }
+          
+          console.log(`📱 Mobile ${isLandscape ? 'Landscape' : 'Portrait'} mode: Using aspect-corrected ${targetWidth}×${targetHeight}`);
           
           canvas.width = targetWidth;
           canvas.height = targetHeight;
@@ -256,15 +279,15 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           // 更新状态
           setCanvasResolution({ width: targetWidth, height: targetHeight });
           
-          console.log('🎮 Mobile fullscreen - True Physical Resolution Strategy:', {
+          console.log('🎮 Mobile fullscreen - Aspect Ratio Preserved Strategy:', {
             '📱 CSS逻辑像素': `${cssScreenWidth}×${cssScreenHeight}`,
             '🔍 Device Pixel Ratio': devicePixelRatio,
-            '🖥️ 真实物理分辨率': `${physicalScreenWidth}×${physicalScreenHeight}`,
+            '🖥️ 设备分辨率': `${physicalScreenWidth}×${physicalScreenHeight}`,
             '🎯 Canvas分辨率': `${targetWidth}×${targetHeight}`,
-            '📊 分辨率利用率': `${((targetWidth * targetHeight) / (physicalScreenWidth * physicalScreenHeight) * 100).toFixed(1)}%`,
-            '✅ 硬件利用': '充分利用设备真实物理分辨率',
-            '🎨 样式管理': '所有CSS样式统一由Canvas inline styles管理',
-            '🚀 显示效果': '高分辨率完整游戏画面'
+            '📐 设备宽高比': deviceAspectRatio.toFixed(3),
+            '🎮 游戏宽高比': gameAspectRatio.toFixed(3),
+            '✅ 宽高比保持': 'objectFit: contain 防止UI变形',
+            '🎨 显示效果': '正确比例的游戏画面，UI不变形'
           });
           
           // 性能和质量指标
@@ -860,11 +883,11 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
               boxSizing: 'content-box',
               imageRendering: 'auto',
               
-              // 移动端：使用固定定位填充整个屏幕
+                            // 移动端：使用固定定位填充整个屏幕，但保持游戏宽高比
               ...(isMobile && {
                 position: 'fixed',
-              top: 0,
-              left: 0,
+                top: 0,
+                left: 0,
                 width: '100vw',
                 height: '100vh',
                 maxWidth: 'none',
@@ -872,7 +895,7 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
                 minWidth: '100vw',
                 minHeight: '100vh',
                 zIndex: 10000,
-                objectFit: 'fill',
+                objectFit: 'contain', // 关键修复：保持宽高比，避免UI变形
                 // 使用支持检测的dvh
                 ...(CSS.supports('height', '100dvh') && {
                   width: '100dvw',
