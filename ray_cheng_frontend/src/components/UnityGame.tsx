@@ -221,16 +221,22 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           // 移动端：保持游戏原始宽高比，避免UI变形
           const isLandscape = screenWidth > screenHeight;
           
-          // 游戏的标准宽高比（通常是16:9或16:10）
-          const gameAspectRatio = 16 / 9; // 1.78:1，可以根据游戏实际情况调整
+          // 游戏的标准宽高比 - 尝试不同的比例看哪个效果更好
+          // const gameAspectRatio = 16 / 9;  // 1.778 (标准横屏)
+          // const gameAspectRatio = 16 / 10; // 1.6 (宽屏显示器常用)
+          const gameAspectRatio = 3 / 2;     // 1.5 (可能更适合您的游戏)
+          // const gameAspectRatio = 4 / 3;   // 1.333 (传统屏幕比例)
+          
           const deviceAspectRatio = screenWidth / screenHeight;
           
           let targetWidth, targetHeight;
           
-          console.log(`📐 宽高比分析:`, {
+          console.log(`📐 宽高比详细分析:`, {
             device: `${deviceAspectRatio.toFixed(3)} (${screenWidth}×${screenHeight})`,
-            game: `${gameAspectRatio.toFixed(3)} (标准16:9)`,
-            needsAdjustment: Math.abs(deviceAspectRatio - gameAspectRatio) > 0.1
+            game: `${gameAspectRatio.toFixed(3)} (当前设置: 3:2)`,
+            isDeviceWider: deviceAspectRatio > gameAspectRatio,
+            difference: `${((deviceAspectRatio - gameAspectRatio) * 100).toFixed(1)}%`,
+            recommendation: deviceAspectRatio > gameAspectRatio ? '以高度为准适配' : '以宽度为准适配'
           });
           
           // 高质量基准分辨率
@@ -238,21 +244,32 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           const baseHeight = 1080;
           
           if (isLandscape) {
-            // 横屏：保持游戏16:9比例，适配到屏幕
+            // 横屏：保持游戏比例，适配到屏幕
             if (deviceAspectRatio > gameAspectRatio) {
-              // 设备更宽（如21:9屏幕），以高度为准适配
+              // 设备更宽，以高度为准适配
               targetHeight = Math.min(screenHeight, 1440);
               targetWidth = Math.floor(targetHeight * gameAspectRatio);
+              console.log(`🔧 横屏适配 - 设备更宽: 高度${targetHeight} → 宽度${targetWidth}`);
             } else {
               // 设备较窄，以宽度为准适配  
               targetWidth = Math.min(screenWidth, 2560);
               targetHeight = Math.floor(targetWidth / gameAspectRatio);
+              console.log(`🔧 横屏适配 - 设备较窄: 宽度${targetWidth} → 高度${targetHeight}`);
             }
           } else {
             // 竖屏：使用竖屏适配的分辨率
             targetWidth = baseHeight; // 1080
             targetHeight = baseWidth; // 1920
+            console.log(`🔧 竖屏适配: ${targetWidth}×${targetHeight}`);
           }
+          
+          console.log(`📊 最终计算结果:`, {
+            orientation: isLandscape ? 'Landscape' : 'Portrait',
+            inputScreen: `${screenWidth}×${screenHeight}`,
+            outputCanvas: `${targetWidth}×${targetHeight}`,
+            canvasAspectRatio: (targetWidth / targetHeight).toFixed(3),
+            shouldMatchGame: gameAspectRatio.toFixed(3)
+          });
           
           // 确保不超过设备能力和性能限制
           const maxPixels = 2560 * 1440; // 最大像素数限制
