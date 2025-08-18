@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 
 interface UnityGameProps {
   className?: string;
@@ -25,10 +25,106 @@ declare global {
 
 const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [error, setError] = useState<string>('');
   const [unityInstance, setUnityInstance] = useState<any>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // 检测移动设备
+  useEffect(() => {
+    const checkMobile = () => {
+      const userAgent = navigator.userAgent.toLowerCase();
+      const mobileKeywords = ['mobile', 'android', 'iphone', 'ipad', 'ipod'];
+      return mobileKeywords.some(keyword => userAgent.includes(keyword)) || 
+             'ontouchstart' in window || 
+             window.innerWidth <= 768;
+    };
+    
+    setIsMobile(checkMobile());
+    
+    // 监听窗口大小变化
+    const handleResize = () => {
+      setIsMobile(checkMobile());
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // 全屏状态监听
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  // 全屏功能
+  const enterFullscreen = useCallback(async () => {
+    if (!containerRef.current) return;
+    
+    try {
+      if (isMobile) {
+        // 移动端：先锁定屏幕方向为横屏
+        if ('screen' in window && 'orientation' in window.screen) {
+          try {
+            await (window.screen.orientation as any).lock('landscape');
+          } catch (err) {
+            console.warn('Could not lock screen orientation:', err);
+          }
+        }
+      }
+      
+      // 进入全屏
+      await containerRef.current.requestFullscreen();
+      setIsFullscreen(true);
+    } catch (err) {
+      console.error('Failed to enter fullscreen:', err);
+    }
+  }, [isMobile]);
+
+  const exitFullscreen = useCallback(async () => {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      }
+      setIsFullscreen(false);
+    } catch (err) {
+      console.error('Failed to exit fullscreen:', err);
+    }
+  }, []);
+
+  // ESC键和双击退出全屏
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isFullscreen) {
+        exitFullscreen();
+      }
+    };
+
+    const handleDoubleClick = (event: MouseEvent) => {
+      if (isFullscreen && event.target === canvasRef.current) {
+        exitFullscreen();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    if (canvasRef.current) {
+      canvasRef.current.addEventListener('dblclick', handleDoubleClick);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      if (canvasRef.current) {
+        canvasRef.current.removeEventListener('dblclick', handleDoubleClick);
+      }
+    };
+  }, [isFullscreen, exitFullscreen]);
 
   useEffect(() => {
     let isMounted = true;
@@ -64,6 +160,9 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
               companyName: 'RayCheng',
               productName: 'Super Hexagon',
               productVersion: '1.0',
+              // WebGL 特定配置
+              matchWebGLToCanvasSize: true,
+              devicePixelRatio: 1,
             };
 
             const instance = await window.createUnityInstance(
@@ -203,24 +302,108 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
         </div>
       )}
 
-      <div style={{
-        position: 'relative',
-        width: '100%',
-        maxWidth: '960px',
-        margin: '0 auto'
-      }}>
+      <div 
+        ref={containerRef}
+        style={{
+          position: 'relative',
+          width: '100%',
+          maxWidth: '960px',
+          margin: '0 auto',
+          // 全屏时的样式
+          ...(isFullscreen && {
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            maxWidth: 'none',
+            margin: 0,
+            background: '#000',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          })
+        }}
+      >
+        {/* 全屏按钮 */}
+        {!isLoading && !error && unityInstance && (
+          <button
+            onClick={isFullscreen ? exitFullscreen : enterFullscreen}
+            style={{
+              position: 'absolute',
+              top: '10px',
+              right: '10px',
+              zIndex: 10000,
+              background: 'rgba(0, 0, 0, 0.7)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '5px',
+              padding: '8px 12px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              transition: 'background 0.3s ease'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(0, 0, 0, 0.9)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(0, 0, 0, 0.7)';
+            }}
+            title={isFullscreen ? 'Exit Fullscreen (ESC or Double-click)' : `Enter Fullscreen ${isMobile ? '(Landscape)' : ''}`}
+          >
+            {isFullscreen ? '⚫' : '⚪'}
+            {isFullscreen ? 'Exit' : 'Full'}
+            {isMobile && !isFullscreen && ' 🔄'}
+          </button>
+        )}
+
         <canvas 
           ref={canvasRef}
           id="unity-canvas"
           style={{
-            width: '100%',
-            height: 'auto',
+            width: isFullscreen ? (isMobile ? '100vh' : '100vw') : '960px',
+            height: isFullscreen ? (isMobile ? '100vw' : '100vh') : '600px',
+            maxWidth: isFullscreen ? 'none' : '960px',
+            maxHeight: isFullscreen ? 'none' : '600px',
             background: '#231F20',
-            display: error ? 'none' : 'block'
+            display: error ? 'none' : 'block',
+            border: isFullscreen ? 'none' : '1px solid #444',
+            // 确保Canvas不被缩放，保持1:1像素比
+            imageRendering: 'pixelated',
+            // 防止浏览器默认的触摸行为
+            touchAction: 'none',
+            userSelect: 'none',
+            // 全屏时居中
+            ...(isFullscreen && {
+              objectFit: 'contain'
+            })
           }}
           width={960}
           height={600}
         />
+
+        {/* 全屏时的说明文字 */}
+        {isFullscreen && (
+          <div style={{
+            position: 'absolute',
+            bottom: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            color: 'rgba(255, 255, 255, 0.7)',
+            fontSize: '14px',
+            textAlign: 'center',
+            background: 'rgba(0, 0, 0, 0.5)',
+            padding: '8px 16px',
+            borderRadius: '20px',
+            pointerEvents: 'none'
+          }}>
+            Press ESC or Double-click to exit fullscreen
+          </div>
+        )}
       </div>
 
       {!isLoading && !error && !unityInstance && (
