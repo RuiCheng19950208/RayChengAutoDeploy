@@ -325,7 +325,9 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           
           if (isFullscreen) {
             // 🚀 全屏模式：摆脱浏览器viewport限制，使用设备真实分辨率能力
-            const isLandscapeMode = screenWidth > screenHeight;
+            // 关键修复：直接使用screen API判断横屏，不依赖viewport限制的值
+            // eslint-disable-next-line no-restricted-globals
+            const isLandscapeMode = window.innerWidth > window.innerHeight; // 当前窗口是否横屏
             
             if (isLandscapeMode) {
               // 🎮 横屏全屏：专用高分辨率策略
@@ -353,7 +355,10 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
                 addDebugInfo(`🎮 横屏专用: 使用设备最大分辨率 ${targetWidth}×${targetHeight}`);
               }
               
+              // eslint-disable-next-line no-restricted-globals
               addDebugInfo(`📱 真实屏幕尺寸: ${realScreenWidth}×${realScreenHeight} (突破viewport限制)`);
+              // eslint-disable-next-line no-restricted-globals
+              addDebugInfo(`🔍 对比: CSS逻辑${cssDisplayWidth}×${cssDisplayHeight} vs 真实screen ${screen.width}×${screen.height}`);
               
             } else {
               // 📱 竖屏全屏：保守策略，基于当前视口
