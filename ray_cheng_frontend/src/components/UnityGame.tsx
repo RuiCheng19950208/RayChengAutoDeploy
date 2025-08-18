@@ -1,5 +1,28 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 
+// 添加CSS动画样式
+const styleSheet = document.createElement('style');
+styleSheet.textContent = `
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  
+  .immersive-fullscreen-container {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+`;
+
+if (!document.head.querySelector('style[data-unity-game-styles]')) {
+  styleSheet.setAttribute('data-unity-game-styles', 'true');
+  document.head.appendChild(styleSheet);
+}
+
 interface UnityGameProps {
   className?: string;
 }
@@ -82,6 +105,78 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
+
+  // 沉浸式全屏效果：禁用页面滚动、锁定视角
+  useEffect(() => {
+    if (isFullscreen && isMobile) {
+      // 保存原始body样式
+      const originalBodyStyle = {
+        overflow: document.body.style.overflow,
+        position: document.body.style.position,
+        width: document.body.style.width,
+        height: document.body.style.height,
+        touchAction: document.body.style.touchAction,
+        userSelect: document.body.style.userSelect
+      };
+
+      // 设置沉浸式全屏样式
+      document.body.style.overflow = 'hidden'; // 禁止滚动
+      document.body.style.position = 'fixed'; // 固定位置，防止地址栏影响
+      document.body.style.width = '100vw';
+      document.body.style.height = '100vh';
+      document.body.style.touchAction = 'none'; // 禁用触摸手势
+      document.body.style.userSelect = 'none'; // 禁用文本选择
+
+      // 禁用页面缩放
+      const viewport = document.querySelector('meta[name="viewport"]');
+      const originalViewport = viewport?.getAttribute('content') || '';
+      if (viewport) {
+        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+      }
+
+      // 阻止默认的触摸事件
+      const preventDefaultTouch = (e: TouchEvent) => {
+        if (e.touches.length > 1) {
+          e.preventDefault(); // 防止多点触控缩放
+        }
+      };
+
+      const preventScroll = (e: Event) => {
+        e.preventDefault();
+      };
+
+      // 添加事件监听器
+      document.addEventListener('touchmove', preventDefaultTouch, { passive: false });
+      document.addEventListener('gesturestart', preventScroll, { passive: false });
+      document.addEventListener('gesturechange', preventScroll, { passive: false });
+      document.addEventListener('gestureend', preventScroll, { passive: false });
+      
+      console.log('Immersive fullscreen mode activated');
+
+      return () => {
+        // 恢复原始样式
+        document.body.style.overflow = originalBodyStyle.overflow;
+        document.body.style.position = originalBodyStyle.position;
+        document.body.style.width = originalBodyStyle.width;
+        document.body.style.height = originalBodyStyle.height;
+        document.body.style.touchAction = originalBodyStyle.touchAction;
+        document.body.style.userSelect = originalBodyStyle.userSelect;
+
+        // 恢复viewport设置
+        if (viewport && originalViewport) {
+          viewport.setAttribute('content', originalViewport);
+        }
+
+        // 移除事件监听器
+        document.removeEventListener('touchmove', preventDefaultTouch);
+        document.removeEventListener('gesturestart', preventScroll);
+        document.removeEventListener('gesturechange', preventScroll);
+        document.removeEventListener('gestureend', preventScroll);
+        
+        console.log('Immersive fullscreen mode deactivated');
+      };
+    }
+  }, [isFullscreen, isMobile]);
 
   // Unity Canvas resize when fullscreen changes
   useEffect(() => {
@@ -201,16 +296,36 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
         // 移动端：先锁定屏幕方向为横屏
         if ('screen' in window && 'orientation' in window.screen) {
           try {
-            await (window.screen.orientation as any).lock('landscape');
+            await (window.screen.orientation as any).lock('landscape-primary');
+            console.log('Screen orientation locked to landscape');
           } catch (err) {
             console.warn('Could not lock screen orientation:', err);
+            // 尝试备用方法
+            try {
+              await (window.screen.orientation as any).lock('landscape');
+            } catch (fallbackErr) {
+              console.warn('Fallback orientation lock also failed:', fallbackErr);
+            }
           }
         }
+
+        // 尝试进入沉浸式模式（隐藏地址栏等UI）
+        if (containerRef.current.requestFullscreen) {
+          await containerRef.current.requestFullscreen();
+        } else if ((containerRef.current as any).webkitRequestFullscreen) {
+          await (containerRef.current as any).webkitRequestFullscreen();
+        } else if ((containerRef.current as any).mozRequestFullScreen) {
+          await (containerRef.current as any).mozRequestFullScreen();
+        } else if ((containerRef.current as any).msRequestFullscreen) {
+          await (containerRef.current as any).msRequestFullscreen();
+        }
+      } else {
+        // 桌面端：直接进入全屏
+        await containerRef.current.requestFullscreen();
       }
       
-      // 进入全屏
-      await containerRef.current.requestFullscreen();
       setIsFullscreen(true);
+      console.log('Entered immersive fullscreen mode');
     } catch (err) {
       console.error('Failed to enter fullscreen:', err);
     }
@@ -218,14 +333,27 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
 
   const exitFullscreen = useCallback(async () => {
     try {
+      // 先退出全屏模式
       if (document.fullscreenElement) {
         await document.exitFullscreen();
       }
+      
+      // 移动端：解锁屏幕方向
+      if (isMobile && 'screen' in window && 'orientation' in window.screen) {
+        try {
+          await (window.screen.orientation as any).unlock();
+          console.log('Screen orientation unlocked');
+        } catch (err) {
+          console.warn('Could not unlock screen orientation:', err);
+        }
+      }
+      
       setIsFullscreen(false);
+      console.log('Exited immersive fullscreen mode');
     } catch (err) {
       console.error('Failed to exit fullscreen:', err);
     }
-  }, []);
+  }, [isMobile]);
 
   // ESC key to exit fullscreen (PC only)
   useEffect(() => {
@@ -510,6 +638,7 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
 
       <div 
         ref={containerRef}
+        className={isFullscreen && isMobile ? 'immersive-fullscreen-container' : ''}
         style={{
           position: 'relative',
           width: '100%',
@@ -537,7 +666,13 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
             justifyContent: 'center',
             overflow: 'hidden',
             // 确保容器完全覆盖视口
-            boxSizing: 'border-box'
+            boxSizing: 'border-box',
+            // 移动端沉浸式效果增强
+            ...(isMobile && {
+              animation: 'fadeIn 0.3s ease-in-out',
+              WebkitBackfaceVisibility: 'hidden',
+              backfaceVisibility: 'hidden'
+            })
           })
         }}
       >
@@ -614,7 +749,20 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
               height: '100vh',
               maxWidth: 'none',
               maxHeight: 'none',
-              objectFit: isMobile ? 'fill' : 'contain'  // 移动端填充，桌面端保持比例
+              objectFit: isMobile ? 'fill' : 'contain',  // 移动端填充，桌面端保持比例
+              // 移动端沉浸式全屏样式
+              ...(isMobile && {
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                zIndex: 10000,
+                touchAction: 'manipulation', // 允许游戏内的触摸操作
+                WebkitTouchCallout: 'none', // iOS：禁用长按菜单
+                WebkitUserSelect: 'none',   // iOS：禁用文本选择
+                WebkitTapHighlightColor: 'transparent', // iOS：禁用点击高亮
+                msContentZooming: 'none',   // IE：禁用缩放
+                msTouchAction: 'manipulation' // IE：触摸操作
+              })
             })
           }}
           width={960}
@@ -628,15 +776,26 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
             bottom: '20px',
             left: '50%',
             transform: 'translateX(-50%)',
-            color: 'rgba(255, 255, 255, 0.7)',
-            fontSize: isMobile ? '16px' : '14px',
+            color: 'rgba(255, 255, 255, 0.8)',
+            fontSize: isMobile ? '14px' : '14px',
             textAlign: 'center',
-            background: 'rgba(0, 0, 0, 0.6)',
-            padding: isMobile ? '10px 20px' : '8px 16px',
-            borderRadius: '20px',
-            pointerEvents: 'none'
+            background: 'rgba(0, 0, 0, 0.7)',
+            padding: isMobile ? '12px 24px' : '8px 16px',
+            borderRadius: '25px',
+            pointerEvents: 'none',
+            maxWidth: isMobile ? '80vw' : 'auto',
+            lineHeight: '1.4',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255, 255, 255, 0.1)'
           }}>
-            {isMobile ? 'Rotate device to portrait to exit fullscreen' : 'Press ESC key or click top-right button to exit fullscreen'}
+            {isMobile ? (
+              <>
+                🎮 <strong>沉浸式游戏模式已激活</strong><br/>
+                旋转至竖屏可退出全屏
+              </>
+            ) : (
+              'Press ESC key or click top-right button to exit fullscreen'
+            )}
           </div>
         )}
       </div>
