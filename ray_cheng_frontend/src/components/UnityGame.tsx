@@ -194,19 +194,21 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
         // 在全屏模式下，使用screen对象获取真实屏幕尺寸
         // screen.width/height = 物理屏幕CSS像素
         // window.innerWidth/Height = 浏览器视口（可能被地址栏等影响）
+        // eslint-disable-next-line no-restricted-globals
         const screenWidth = screen.width;
+        // eslint-disable-next-line no-restricted-globals
         const screenHeight = screen.height;
         
         console.log('📐 Screen Size Detection:', {
-          '🖥️ Physical Screen (screen.*)': `${screen.width}×${screen.height}`,
+          '🖥️ Physical Screen': `${screenWidth}×${screenHeight}`,
           '🌐 Browser Viewport (window.inner*)': `${window.innerWidth}×${window.innerHeight}`,
           '📱 Device Pixel Ratio': devicePixelRatio,
           '🎯 Using for calculation': `${screenWidth}×${screenHeight} (Physical Screen)`
         });
         
-        // 计算实际的Canvas分辨率
-        const actualWidth = Math.floor(screenWidth * devicePixelRatio);
-        const actualHeight = Math.floor(screenHeight * devicePixelRatio);
+        // 物理分辨率仅用于日志显示
+        // const actualWidth = Math.floor(screenWidth * devicePixelRatio);
+        // const actualHeight = Math.floor(screenHeight * devicePixelRatio);
 
         if (isMobile) {
           // 移动端：固定使用高质量分辨率，不受CSS尺寸影响
@@ -679,7 +681,8 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
         (window as any).unityGameInstance = null;
       }
     };
-  }, []); // 只在组件挂载时运行一次
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 只在组件挂载时运行一次，isGameLoaded和unityInstance用于防重复加载守卫
 
   const handleRetry = () => {
     // 清理当前状态
