@@ -1,30 +1,60 @@
-Backend (FastAPI + PostgreSQL)
+# Ray Cheng Super Hexagon - Backend API
 
-Quickstart (Windows PowerShell)
+FastAPI backend server with PostgreSQL database for the Super Hexagon game platform.
 
-1) Set environment variables
+## 🚀 Quick Start
+
+### Environment Setup (Windows PowerShell)
 
 ```powershell
 $env:DATABASE_URL = "postgresql+psycopg://postgres:postgres@localhost:5432/postgres"
-$env:JWT_SECRET_KEY = "change-me"
+$env:JWT_SECRET_KEY = "your-secret-key-here"
 $env:JWT_EXPIRE_MINUTES = "120"
 ```
 
-2) Create venv, install, run
+### Installation & Run
 
 ```powershell
-cd backend
+cd ray_cheng_backend
 python -m venv .venv
 . .venv/Scripts/Activate.ps1
 pip install -r requirements.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-API
-- POST /api/register → body: { username, email?, password, passwordConfirm }
-- POST /api/login → body: { username, password } → returns { access_token, token_type }
+## 📡 API Endpoints
 
-Notes
-- Tables auto-create on startup; prefer Alembic for production.
-- CORS is open for development.
+### Authentication
+- `POST /api/register` - User registration
+- `POST /api/login` - User authentication
+- `GET /api/me` - Get current user info
+
+### Game Features
+- `GET /api/leaderboard` - Get score rankings
+- `POST /api/submit-score` - Submit game score
+
+### Admin (Admin only)
+- `GET /api/admin/users` - List all users
+- `DELETE /api/admin/users/{id}` - Delete user
+- `GET /api/admin/stats` - Get platform statistics
+
+## 🗄️ Database
+
+- Automatic table creation on startup
+- User migration for existing databases
+- Role-based access control (admin/user)
+- Float precision score tracking
+
+## 🛠️ Features
+
+- JWT-based authentication
+- Role-based authorization
+- Automatic database migrations
+- Score submission with validation
+- Admin panel functionality
+- CORS configuration for development
+
+## 📖 Documentation
+
+Interactive API docs available at: `http://localhost:8000/docs`
 
