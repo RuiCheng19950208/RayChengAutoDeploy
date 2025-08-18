@@ -191,44 +191,57 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
         // 获取设备的实际物理屏幕分辨率
         const devicePixelRatio = window.devicePixelRatio || 1;
         
-        // 在全屏模式下，使用screen对象获取真实屏幕尺寸
-        // screen.width/height = 物理屏幕CSS像素
-        // window.innerWidth/Height = 浏览器视口（可能被地址栏等影响）
+        // 获取真实的物理屏幕分辨率
         // eslint-disable-next-line no-restricted-globals
-        const screenWidth = screen.width;
+        const cssScreenWidth = screen.width;
         // eslint-disable-next-line no-restricted-globals
-        const screenHeight = screen.height;
+        const cssScreenHeight = screen.height;
         
-        console.log('📐 Screen Size Detection:', {
-          '🖥️ Physical Screen': `${screenWidth}×${screenHeight}`,
-          '🌐 Browser Viewport (window.inner*)': `${window.innerWidth}×${window.innerHeight}`,
-          '📱 Device Pixel Ratio': devicePixelRatio,
-          '🎯 Using for calculation': `${screenWidth}×${screenHeight} (Physical Screen)`
+        // 计算真实物理分辨率 = CSS尺寸 × devicePixelRatio
+        const physicalScreenWidth = cssScreenWidth * devicePixelRatio;
+        const physicalScreenHeight = cssScreenHeight * devicePixelRatio;
+        
+        console.log('📐 真实屏幕分辨率检测:', {
+          '📱 CSS逻辑像素 (screen.*)': `${cssScreenWidth}×${cssScreenHeight}`,
+          '🔍 Device Pixel Ratio': devicePixelRatio,
+          '🖥️ 真实物理分辨率': `${physicalScreenWidth}×${physicalScreenHeight}`,
+          '🌐 浏览器视口 (window.inner*)': `${window.innerWidth}×${window.innerHeight}`,
+          '🎯 用于计算': `${physicalScreenWidth}×${physicalScreenHeight} (真实物理分辨率)`
         });
+        
+        // 使用真实物理分辨率进行计算
+        const screenWidth = physicalScreenWidth;
+        const screenHeight = physicalScreenHeight;
         
         // 物理分辨率仅用于日志显示
         // const actualWidth = Math.floor(screenWidth * devicePixelRatio);
         // const actualHeight = Math.floor(screenHeight * devicePixelRatio);
 
         if (isMobile) {
-          // 移动端：固定使用高质量分辨率，不受CSS尺寸影响
-          
-          // 根据屏幕方向选择最佳分辨率
+          // 移动端：使用真实物理分辨率，充分利用设备硬件能力
           const isLandscape = screenWidth > screenHeight;
           
           let targetWidth, targetHeight;
           
-          if (isLandscape) {
-            // 横屏：使用1920×1080全高清分辨率
-            targetWidth = 1920;
-            targetHeight = 1080;
-          } else {
-            // 竖屏：使用1080×1920分辨率（旋转的全高清）
-            targetWidth = 1080;
-            targetHeight = 1920;
+          // 直接使用物理分辨率，但设置合理的上限
+          const maxWidth = 2560;  // 最大宽度限制
+          const maxHeight = 1440; // 最大高度限制
+          
+          // 使用真实物理分辨率，但不超过最大限制
+          targetWidth = Math.min(screenWidth, maxWidth);
+          targetHeight = Math.min(screenHeight, maxHeight);
+          
+          // 如果物理分辨率超限，按比例缩小
+          if (screenWidth > maxWidth || screenHeight > maxHeight) {
+            const scaleX = maxWidth / screenWidth;
+            const scaleY = maxHeight / screenHeight;
+            const scale = Math.min(scaleX, scaleY);
+            
+            targetWidth = Math.floor(screenWidth * scale);
+            targetHeight = Math.floor(screenHeight * scale);
           }
           
-          console.log(`📱 Mobile ${isLandscape ? 'Landscape' : 'Portrait'} mode: Using fixed ${targetWidth}×${targetHeight} resolution`);
+          console.log(`📱 Mobile ${isLandscape ? 'Landscape' : 'Portrait'} mode: Using physical resolution ${targetWidth}×${targetHeight}`);
           
           canvas.width = targetWidth;
           canvas.height = targetHeight;
@@ -243,14 +256,15 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           // 更新状态
           setCanvasResolution({ width: targetWidth, height: targetHeight });
           
-          console.log('🎮 Mobile fullscreen - No Conflicts Strategy:', {
-            '📱 Physical Screen Size': `${screenWidth}×${screenHeight} CSS像素 (设备真实屏幕)`,
+          console.log('🎮 Mobile fullscreen - True Physical Resolution Strategy:', {
+            '📱 CSS逻辑像素': `${cssScreenWidth}×${cssScreenHeight}`,
             '🔍 Device Pixel Ratio': devicePixelRatio,
-            '📐 Physical Resolution': `${screenWidth * devicePixelRatio}×${screenHeight * devicePixelRatio} 物理像素`,
-            '🎯 Game Render Resolution': `${targetWidth}×${targetHeight} (固定全高清质量)`,
-            '✅ 冲突解决': 'resizeCanvas不再设置CSS样式，避免与inline样式冲突',
+            '🖥️ 真实物理分辨率': `${physicalScreenWidth}×${physicalScreenHeight}`,
+            '🎯 Canvas分辨率': `${targetWidth}×${targetHeight}`,
+            '📊 分辨率利用率': `${((targetWidth * targetHeight) / (physicalScreenWidth * physicalScreenHeight) * 100).toFixed(1)}%`,
+            '✅ 硬件利用': '充分利用设备真实物理分辨率',
             '🎨 样式管理': '所有CSS样式统一由Canvas inline styles管理',
-            '🚀 分辨率策略': '内部渲染分辨率与CSS显示样式完全分离'
+            '🚀 显示效果': '高分辨率完整游戏画面'
           });
           
           // 性能和质量指标
