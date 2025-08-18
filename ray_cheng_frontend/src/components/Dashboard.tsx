@@ -1,21 +1,31 @@
 import React from 'react';
 import UnityGame from './UnityGame';
+import Leaderboard from './Leaderboard';
 
 interface DashboardProps {
   username: string;
+  userRole: string;
   onLogout: () => void;
+  onShowAdmin: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ username, onLogout }) => {
+const Dashboard: React.FC<DashboardProps> = ({ username, userRole, onLogout, onShowAdmin }) => {
   return (
     <div className="dashboard">
       <header className="dashboard-header">
         <h1>Ray Cheng Game Dashboard</h1>
         <div className="user-info">
-          <span>Welcome, {username}!</span>
-          <button onClick={onLogout} className="logout-button">
-            Logout
-          </button>
+          <span>Welcome, {username}! ({userRole})</span>
+          <div className="button-group">
+            {userRole === 'admin' && (
+              <button onClick={onShowAdmin} className="admin-button">
+                🛠️ Admin Panel
+              </button>
+            )}
+            <button onClick={onLogout} className="logout-button">
+              Logout
+            </button>
+          </div>
         </div>
       </header>
       
@@ -120,6 +130,10 @@ const Dashboard: React.FC<DashboardProps> = ({ username, onLogout }) => {
           </div>
         </div>
         
+        <div className="leaderboard-section">
+          <Leaderboard />
+        </div>
+        
         <div className="features-section">
           <h3>🎯 Features</h3>
           <ul>
@@ -127,6 +141,7 @@ const Dashboard: React.FC<DashboardProps> = ({ username, onLogout }) => {
             <li>Responsive game display</li>
             <li>Automatic game loading</li>
             <li>User authentication system</li>
+            <li>Real-time leaderboard</li>
           </ul>
         </div>
       </main>

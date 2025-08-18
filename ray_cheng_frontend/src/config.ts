@@ -5,6 +5,18 @@ const getApiBaseUrl = () => {
     return process.env.REACT_APP_API_BASE_URL;
   }
   
+  // 在生产环境中，尝试自动检测后端URL
+  if (process.env.NODE_ENV === 'production') {
+    const hostname = window.location.hostname;
+    const protocol = window.location.protocol;
+    
+    // 如果是部署在同一个域名下（比如 Render）
+    if (hostname.includes('onrender.com') || hostname.includes('vercel.app') || hostname.includes('netlify.app')) {
+      // 假设后端也部署在相同的服务上，使用相对路径或同域名
+      return `${protocol}//${hostname}/api`;
+    }
+  }
+  
   // 在开发环境中，检测当前访问的主机
   if (process.env.NODE_ENV === 'development') {
     const hostname = window.location.hostname;

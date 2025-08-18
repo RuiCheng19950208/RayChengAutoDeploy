@@ -72,10 +72,13 @@ const Register: React.FC<RegisterProps> = ({ onRegister, onSwitchToLogin }) => {
 							id="password"
 							value={password}
 							onChange={(e) => setPassword(e.target.value)}
-							placeholder="Enter password"
+							placeholder="Enter password (6-128 characters)"
 							autoComplete="new-password"
+							minLength={6}
+							maxLength={128}
 							required
 						/>
+						<small className="password-hint">Password must be 6-128 characters long</small>
 					</div>
 
 					<div className="form-group">

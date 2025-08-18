@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, func
+from sqlalchemy import Column, Integer, String, DateTime, Float, func
 
 from .database import Base
 
@@ -10,6 +10,8 @@ class User(Base):
 	username = Column(String(150), nullable=False, unique=True, index=True)
 	email = Column(String(255), nullable=True, unique=True, index=True)
 	password_hash = Column(String(255), nullable=False)
+	record = Column(Float, nullable=False, default=0.0)
+	role = Column(String(50), nullable=False, default="user")
 	created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 

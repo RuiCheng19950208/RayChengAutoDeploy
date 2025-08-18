@@ -5,6 +5,7 @@ from .. import schemas
 from ..database import get_db
 from ..models import User
 from ..security import hash_password, verify_password, create_access_token
+from ..dependencies import get_current_user
 
 
 router = APIRouter()
@@ -29,6 +30,8 @@ def register_user(payload: schemas.UserCreate, db: Session = Depends(get_db)):
 		username=payload.username,
 		email=payload.email,
 		password_hash=hash_password(payload.password),
+		record=0.0,
+		role="user"
 	)
 	db.add(user)
 	db.commit()
@@ -44,5 +47,11 @@ def login_user(payload: schemas.UserLogin, db: Session = Depends(get_db)):
 
 	token = create_access_token(subject=str(user.id))
 	return {"access_token": token, "token_type": "bearer"}
+
+
+@router.get("/me", response_model=schemas.UserOut)
+def get_current_user_info(current_user: User = Depends(get_current_user)):
+	"""获取当前用户信息"""
+	return current_user
 
 
