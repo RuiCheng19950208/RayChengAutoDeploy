@@ -188,10 +188,21 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
       if (!canvas) return;
 
       if (isFullscreen) {
-        // 获取设备的实际分辨率
+        // 获取设备的实际物理屏幕分辨率
         const devicePixelRatio = window.devicePixelRatio || 1;
-        const screenWidth = window.innerWidth;
-        const screenHeight = window.innerHeight;
+        
+        // 在全屏模式下，使用screen对象获取真实屏幕尺寸
+        // screen.width/height = 物理屏幕CSS像素
+        // window.innerWidth/Height = 浏览器视口（可能被地址栏等影响）
+        const screenWidth = screen.width;
+        const screenHeight = screen.height;
+        
+        console.log('📐 Screen Size Detection:', {
+          '🖥️ Physical Screen (screen.*)': `${screen.width}×${screen.height}`,
+          '🌐 Browser Viewport (window.inner*)': `${window.innerWidth}×${window.innerHeight}`,
+          '📱 Device Pixel Ratio': devicePixelRatio,
+          '🎯 Using for calculation': `${screenWidth}×${screenHeight} (Physical Screen)`
+        });
         
         // 计算实际的Canvas分辨率
         const actualWidth = Math.floor(screenWidth * devicePixelRatio);
@@ -252,12 +263,11 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           setCanvasResolution({ width: targetWidth, height: targetHeight });
           
           console.log('🎮 Mobile fullscreen - Fixed Resolution Strategy:', {
-            '📱 CSS Display Size': `${screenWidth}x${screenHeight} (只用于显示，不影响游戏分辨率)`,
+            '📱 Physical Screen Size': `${screenWidth}×${screenHeight} CSS像素 (设备真实屏幕)`,
             '🔍 Device Pixel Ratio': devicePixelRatio,
-            '🎯 Game Render Resolution': `${targetWidth}x${targetHeight} (固定全高清)`,
-            '🎮 Unity渲染质量': `${targetWidth}×${targetHeight} 像素`,
-            '📺 浏览器显示': `${screenWidth}×${screenHeight} CSS像素`,
-            '✨ 分离策略': '游戏分辨率与CSS显示尺寸完全独立',
+            '📐 Physical Resolution': `${screenWidth * devicePixelRatio}×${screenHeight * devicePixelRatio} 物理像素`,
+            '🎯 Game Render Resolution': `${targetWidth}×${targetHeight} (固定全高清质量)`,
+            '✨ 分离策略': '游戏分辨率与屏幕尺寸完全独立',
             '🎨 Canvas CSS显示': {
               width: canvas.style.width,
               height: canvas.style.height,
@@ -297,7 +307,13 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           // 更新状态
           setCanvasResolution({ width: targetWidth, height: targetHeight });
           
-          console.log('🖥️ Desktop fullscreen: Using fixed 1920×1080 resolution');
+          console.log('🖥️ Desktop fullscreen - Fixed Resolution Strategy:', {
+            '📱 Physical Screen Size': `${screenWidth}×${screenHeight} CSS像素 (设备真实屏幕)`,
+            '🔍 Device Pixel Ratio': devicePixelRatio,
+            '📐 Physical Resolution': `${screenWidth * devicePixelRatio}×${screenHeight * devicePixelRatio} 物理像素`,
+            '🎯 Game Render Resolution': `${targetWidth}×${targetHeight} (固定全高清质量)`,
+            '✨ 分离策略': '游戏分辨率与屏幕尺寸完全独立'
+          });
         }
         
         canvas.style.position = 'static';  // 重置positioning，让容器处理定位
