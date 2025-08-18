@@ -1,148 +1,121 @@
-# GitHub Actions 使用指南
+# Ray Cheng Super Hexagon Game Platform
 
-本项目使用 GitHub Actions 实现自动化 CI/CD 流程。
+A full-stack web application featuring Ray Cheng's Super Hexagon game with user authentication, leaderboards, and admin management.
 
-## 🚀 工作流概览
+## 🎮 Features
 
-### 1. CI/CD Pipeline (`ci-cd.yml`)
-主要的持续集成和部署流程，包含：
-- 后端测试（Python + FastAPI）
-- 前端测试（React + TypeScript）
-- Docker 镜像构建和推送
-- 自动部署到不同环境
+- **Unity WebGL Game**: Ray Cheng's custom Super Hexagon game with both single-player and two-player modes
+- **User Authentication**: Secure registration and login system with JWT tokens
+- **Real-time Leaderboards**: Dynamic ranking system with score submission and display
+- **Admin Panel**: User management interface for administrators
+- **Responsive Design**: Mobile-friendly interface with touch controls
+- **Auto-deployment**: Ready for cloud deployment on platforms like Render
 
-**触发条件：**
-- 推送到 `main` 或 `develop` 分支
-- 创建 Pull Request 到 `main` 或 `develop` 分支
+## 🏗️ Tech Stack
 
-### 2. Security Scan (`security-scan.yml`)
-安全扫描和漏洞检查：
-- CodeQL 代码安全分析
-- 依赖漏洞扫描
-- Docker 镜像安全扫描
+### Backend
+- **FastAPI**: Modern Python web framework
+- **PostgreSQL**: Robust database with user management and score tracking
+- **SQLAlchemy**: ORM for database operations
+- **JWT Authentication**: Secure token-based authentication
+- **Pydantic**: Data validation and serialization
 
-**触发条件：**
-- 每周一凌晨 2 点自动运行
-- 推送到 `main` 或 `develop` 分支
-- Pull Request 到 `main` 分支
+### Frontend
+- **React**: Modern frontend framework with TypeScript
+- **Unity WebGL**: Game integration with browser compatibility
+- **CSS3**: Responsive design with modern styling
+- **Local Storage**: Client-side token management
 
-### 3. Code Quality (`code-quality.yml`)
-代码质量检查：
-- Python 代码格式化（Black、isort）
-- Python 代码检查（flake8、mypy）
-- TypeScript 代码检查（ESLint、Prettier）
-- 自动代码格式修复
+## 🚀 Quick Start
 
-**触发条件：**
-- 推送到 `main` 或 `develop` 分支
-- Pull Request 到 `main` 或 `develop` 分支
+### Prerequisites
+- Python 3.11+
+- Node.js 16+
+- PostgreSQL database
 
-### 4. Deploy (`deploy.yml`)
-专门的部署流程：
-- 测试环境部署（develop 分支）
-- 生产环境部署（main 分支）
-- 部署后验证和回滚
-
-**触发条件：**
-- CI/CD Pipeline 完成后自动触发
-
-## 🔧 环境配置
-
-### 环境变量
-在 GitHub 仓库的 Settings > Secrets and variables > Actions 中配置：
-
-#### 必需的环境变量：
-- `DATABASE_URL`: 数据库连接字符串
-- `JWT_SECRET_KEY`: JWT 密钥
-- `JWT_EXPIRE_MINUTES`: JWT 过期时间
-
-#### 可选的环境变量：
-- `DOCKER_USERNAME`: Docker 仓库用户名
-- `DOCKER_PASSWORD`: Docker 仓库密码
-- `STAGING_SERVER`: 测试服务器地址
-- `PRODUCTION_SERVER`: 生产服务器地址
-
-### 环境保护规则
-- `staging`: 测试环境，需要至少一个 reviewer 批准
-- `production`: 生产环境，需要至少两个 reviewer 批准
-
-## 📋 使用步骤
-
-### 1. 开发流程
+### Backend Setup
 ```bash
-# 1. 创建功能分支
-git checkout -b feature/new-feature
-
-# 2. 开发代码
-# ... 编写代码 ...
-
-# 3. 提交代码
-git add .
-git commit -m "feat: add new feature"
-
-# 4. 推送分支
-git push origin feature/new-feature
-
-# 5. 创建 Pull Request
-# GitHub Actions 会自动运行代码质量检查
+cd ray_cheng_backend
+pip install -r requirements.txt
+uvicorn app.main:app --reload
 ```
 
-### 2. 部署流程
+### Frontend Setup
 ```bash
-# 1. 合并到 develop 分支
-# 自动部署到测试环境
-
-# 2. 合并到 main 分支
-# 自动部署到生产环境
+cd ray_cheng_frontend
+npm install
+npm start
 ```
 
-## 🐛 故障排除
+### Environment Variables
+Create `.env` files for configuration:
+- `DATABASE_URL`: PostgreSQL connection string
+- `JWT_SECRET_KEY`: Secret key for JWT tokens
 
-### 常见问题
+## 🎯 Game Features
 
-#### 1. 测试失败
-- 检查测试代码是否正确
-- 查看测试日志了解具体错误
-- 确保所有依赖都已安装
+### Super Hexagon Game
+- **Single Player Mode**: Classic hexagon survival gameplay
+- **Two Player Mode**: Competitive split-screen experience
+- **Touch Controls**: Mobile-optimized touch interface
+- **Score Tracking**: Automatic score submission to leaderboards
+- **Unity WebGL**: Seamless browser integration
 
-#### 2. 构建失败
-- 检查 Dockerfile 语法
-- 确认依赖文件路径正确
-- 查看构建日志了解错误详情
+### User System
+- **Registration**: Simple account creation with validation
+- **Auto-login**: Seamless experience after registration
+- **Role Management**: Admin and user role distinction
+- **Score History**: Personal best tracking
 
-#### 3. 部署失败
-- 检查环境变量配置
-- 确认服务器连接正常
-- 查看部署日志了解错误
+## 📊 Admin Features
 
-### 手动触发工作流
-1. 进入 GitHub 仓库页面
-2. 点击 Actions 标签
-3. 选择要运行的工作流
-4. 点击 "Run workflow" 按钮
-5. 选择分支和参数
-6. 点击 "Run workflow"
+- **User Management**: View and manage all registered users
+- **Statistics Dashboard**: User counts and top scorer information
+- **User Deletion**: Remove users with safety confirmations
+- **Role-based Access**: Secure admin-only functionality
 
-## 📚 相关资源
+## 🔧 Deployment
 
-- [GitHub Actions 官方文档](https://docs.github.com/en/actions)
-- [FastAPI 官方文档](https://fastapi.tiangolo.com/)
-- [Docker 官方文档](https://docs.docker.com/)
-- [PostgreSQL 官方文档](https://www.postgresql.org/docs/)
+The application is designed for easy deployment on cloud platforms:
 
-## 🤝 贡献指南
+### Render Deployment
+1. Connect your GitHub repository
+2. Set environment variables
+3. Configure build and start commands
+4. Deploy both frontend and backend
 
-1. Fork 本仓库
-2. 创建功能分支
-3. 提交更改
-4. 创建 Pull Request
-5. 等待代码审查和 CI 检查通过
-6. 合并代码
+### Environment Configuration
+- Automatic URL detection for different environments
+- CORS configuration for cross-origin requests
+- Database migration on startup
 
-## 📞 支持
+## 🎨 API Documentation
 
-如果遇到问题，请：
-1. 查看 GitHub Actions 日志
-2. 检查相关配置文件
-3. 创建 Issue 描述问题
-4. 联系项目维护者
+Access the interactive API documentation at `/docs` when running the backend server.
+
+### Key Endpoints
+- `POST /api/register` - User registration
+- `POST /api/login` - User authentication
+- `GET /api/leaderboard` - Score rankings
+- `POST /api/submit-score` - Score submission
+- `GET /api/admin/users` - User management (admin only)
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Commit your changes
+4. Push to the branch
+5. Create a Pull Request
+
+## 📄 License
+
+This project is open source and available under the MIT License.
+
+## 👨‍💻 Author
+
+**Ray Cheng** - Game Developer and Full-Stack Engineer
+
+---
+
+*Built with ❤️ for the gaming community*
