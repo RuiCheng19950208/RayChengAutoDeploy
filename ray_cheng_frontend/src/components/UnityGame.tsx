@@ -32,6 +32,7 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
   const [unityInstance, setUnityInstance] = useState<any>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isGameLoaded, setIsGameLoaded] = useState(false);
 
   // 检测移动设备
   useEffect(() => {
@@ -84,19 +85,44 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
       if (!canvas) return;
 
       if (isFullscreen) {
-        // Fullscreen: use full viewport dimensions
-        canvas.style.width = '100vw';
-        canvas.style.height = '100vh';
-        console.log('Unity canvas resized for fullscreen:', { width: '100vw', height: '100vh' });
+        // Fullscreen: use full viewport dimensions and ensure canvas fills entire screen
+        if (isMobile) {
+          // 移动端：填充整个屏幕
+          canvas.style.width = '100vw';
+          canvas.style.height = '100vh';
+          canvas.style.maxWidth = 'none';
+          canvas.style.maxHeight = 'none';
+          canvas.style.objectFit = 'fill'; // 移动端完全填充
+        } else {
+          // 桌面端：保持比例的同时尽可能大
+          canvas.style.width = '100vw';
+          canvas.style.height = '100vh';
+          canvas.style.maxWidth = 'none';
+          canvas.style.maxHeight = 'none';
+          canvas.style.objectFit = 'contain'; // 桌面端保持比例
+        }
+        canvas.style.position = 'static';  // 重置positioning，让容器处理定位
+        console.log('Unity canvas resized for fullscreen:', { 
+          width: '100vw', 
+          height: '100vh',
+          isMobile,
+          viewportSize: `${window.innerWidth}x${window.innerHeight}`
+        });
       } else {
         // Normal mode: restore original dimensions
         if (isMobile) {
           canvas.style.width = '100%';
           canvas.style.height = 'auto';
+          canvas.style.maxWidth = '100%';
+          canvas.style.maxHeight = `${(window.innerWidth * 600) / 960}px`;
         } else {
           canvas.style.width = '960px';
           canvas.style.height = '600px';
+          canvas.style.maxWidth = '960px';
+          canvas.style.maxHeight = '600px';
         }
+        canvas.style.objectFit = 'contain'; // 保持比例
+        canvas.style.position = 'static';  // 重置positioning
         console.log('Unity canvas resized for normal mode');
       }
 
@@ -178,17 +204,22 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
     const handleOrientationChange = () => {
       setTimeout(() => {
         const isLandscape = window.innerWidth > window.innerHeight;
+        const aspectRatio = window.innerWidth / window.innerHeight;
+        
         console.log('Mobile orientation change detected:', { 
           isLandscape, 
           isFullscreen, 
           width: window.innerWidth, 
           height: window.innerHeight,
+          aspectRatio: aspectRatio.toFixed(2),
           unityLoaded: !!unityInstance,
+          isGameLoaded,
           currentFullscreenElement: !!document.fullscreenElement
         });
         
-        // Auto fullscreen on landscape, auto exit on portrait for mobile
-        if (isLandscape && !isFullscreen && unityInstance) {
+        // 只有在游戏已加载且有明确的横屏状态时才执行自动全屏
+        // aspectRatio > 1.2 确保是真正的横屏，避免正方形屏幕的误判
+        if (isLandscape && aspectRatio > 1.2 && !isFullscreen && unityInstance && isGameLoaded) {
           console.log('Mobile landscape detected, auto entering fullscreen');
           enterFullscreen();
         } else if (!isLandscape && isFullscreen) {
@@ -206,14 +237,19 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
       window.removeEventListener('orientationchange', handleOrientationChange);
       window.removeEventListener('resize', handleOrientationChange);
     };
-  }, [isMobile, isFullscreen, unityInstance, enterFullscreen, exitFullscreen]);
+  }, [isMobile, isFullscreen, unityInstance, isGameLoaded, enterFullscreen, exitFullscreen]);
 
   useEffect(() => {
     let isMounted = true;
 
     const loadUnityGame = async () => {
-      if (!canvasRef.current) {
-        console.error('Canvas ref is not available');
+      // 防止重复加载的守卫条件
+      if (!canvasRef.current || isGameLoaded || unityInstance) {
+        console.log('Skipping Unity game load:', { 
+          canvasAvailable: !!canvasRef.current, 
+          isGameLoaded, 
+          unityInstanceExists: !!unityInstance 
+        });
         return;
       }
 
@@ -259,6 +295,7 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
 
             if (isMounted) {
               setUnityInstance(instance);
+              setIsGameLoaded(true);
               setIsLoading(false);
               console.log('Unity game loaded successfully');
               
@@ -309,18 +346,38 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
       if (unityInstance && unityInstance.quit) {
         try {
           unityInstance.quit();
+          console.log('Unity instance cleaned up successfully');
         } catch (err) {
           console.warn('Error quitting Unity instance:', err);
         }
       }
+      
+      // 清理全局实例引用
+      if ((window as any).unityGameInstance) {
+        (window as any).unityGameInstance = null;
+      }
     };
-  }, [unityInstance]);
+  }, []); // 只在组件挂载时运行一次
 
   const handleRetry = () => {
+    // 清理当前状态
     setError('');
     setLoadingProgress(0);
-    // 重新加载组件
-    window.location.reload();
+    setIsGameLoaded(false);
+    setUnityInstance(null);
+    
+    // 清理全局Unity实例
+    if ((window as any).unityGameInstance) {
+      try {
+        (window as any).unityGameInstance.quit();
+      } catch (err) {
+        console.warn('Error quitting Unity instance during retry:', err);
+      }
+      (window as any).unityGameInstance = null;
+    }
+    
+    // 重新加载页面作为最后手段
+    setTimeout(() => window.location.reload(), 100);
   };
 
   return (
@@ -409,7 +466,10 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
             zIndex: 9999,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            overflow: 'hidden',
+            // 确保容器完全覆盖视口
+            boxSizing: 'border-box'
           })
         }}
       >
@@ -480,10 +540,11 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
             userSelect: 'none',
             // 全屏时填充整个屏幕
             ...(isFullscreen && {
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              objectFit: 'fill'  // 填充整个容器，不保持比例
+              width: '100vw',
+              height: '100vh',
+              maxWidth: 'none',
+              maxHeight: 'none',
+              objectFit: isMobile ? 'fill' : 'contain'  // 移动端填充，桌面端保持比例
             })
           }}
           width={960}
