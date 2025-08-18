@@ -117,39 +117,29 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
         });
       } else {
         // Normal mode: restore original dimensions
-        if (isMobile || window.innerWidth <= 1024) {
-          // 移动端和小屏设备：根据屏幕方向调整尺寸
+        if (isMobile) {
+          // 移动端：简化尺寸计算，保持居中
           const viewportWidth = window.innerWidth;
           const viewportHeight = window.innerHeight;
-          const gameAspectRatio = 960 / 600; // 游戏原始比例
+          const gameAspectRatio = 960 / 600; // 游戏原始比例 16:10
           const isLandscapeMode = viewportWidth > viewportHeight;
           
           if (isLandscapeMode) {
-            // 横屏模式：使用更大的比例以更好地利用屏幕空间
-            const targetWidth = Math.min(viewportWidth * 0.95, 960);
-            const targetHeight = targetWidth / gameAspectRatio;
+            // 横屏模式：将由全屏模式处理，这里设置临时大小
+            const containerWidth = viewportWidth - 20; // 留出边距
+            const targetHeight = Math.min(viewportHeight * 0.8, containerWidth / gameAspectRatio);
+            const targetWidth = targetHeight * gameAspectRatio;
             
-            // 横屏时允许使用更多高度
-            const maxHeight = viewportHeight * 0.85;
-            if (targetHeight > maxHeight) {
-              const adjustedHeight = maxHeight;
-              const adjustedWidth = adjustedHeight * gameAspectRatio;
-              canvas.style.width = `${adjustedWidth}px`;
-              canvas.style.height = `${adjustedHeight}px`;
-            } else {
-              canvas.style.width = `${targetWidth}px`;
-              canvas.style.height = `${targetHeight}px`;
-            }
-            
-            canvas.style.maxWidth = '95vw';
-            canvas.style.maxHeight = '85vh';
+            canvas.style.width = `${targetWidth}px`;
+            canvas.style.height = `${targetHeight}px`;
           } else {
-            // 竖屏模式：保持适当大小，不要太小
-            const targetWidth = Math.min(viewportWidth * 0.9, 960);
+            // 竖屏模式：使用容器宽度的90%，保持比例
+            const containerWidth = viewportWidth - 20; // 留出边距
+            const targetWidth = Math.min(containerWidth * 0.9, 960);
             const targetHeight = targetWidth / gameAspectRatio;
             
-            // 如果高度超过视口的70%，则调整为视口高度的70%
-            const maxHeight = viewportHeight * 0.7;
+            // 确保高度不超过视口的50%
+            const maxHeight = viewportHeight * 0.5;
             if (targetHeight > maxHeight) {
               const adjustedHeight = maxHeight;
               const adjustedWidth = adjustedHeight * gameAspectRatio;
@@ -159,16 +149,16 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
               canvas.style.width = `${targetWidth}px`;
               canvas.style.height = `${targetHeight}px`;
             }
-            
-            canvas.style.maxWidth = '90vw';
-            canvas.style.maxHeight = '70vh';
           }
           
-          console.log('Mobile/Small screen canvas sizing:', {
+          canvas.style.maxWidth = '100%';
+          canvas.style.maxHeight = 'none';
+          
+          console.log('Mobile canvas sizing (simplified):', {
             viewportSize: `${viewportWidth}x${viewportHeight}`,
             isLandscape: isLandscapeMode,
             canvasSize: `${canvas.style.width} x ${canvas.style.height}`,
-            isMobile
+            containerWidth: viewportWidth - 20
           });
         } else {
           canvas.style.width = '960px';
@@ -272,14 +262,20 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
         currentFullscreenElement: !!document.fullscreenElement
       });
       
-      // 对于小屏设备（包括移动端和平板）在横屏时自动全屏
-      // 降低aspectRatio阈值到1.1，让更多横屏状态能触发自动全屏
-      if (isLandscape && aspectRatio > 1.1 && !isFullscreen && unityInstance && isGameLoaded && isSmallScreen) {
-        console.log('Landscape detected on small screen, auto entering fullscreen');
+      // 移动端设备在横屏时自动全屏，竖屏时退出全屏
+      if (isMobile) {
+        if (isLandscape && aspectRatio > 1.1 && !isFullscreen && unityInstance && isGameLoaded) {
+          console.log('Mobile landscape detected, auto entering fullscreen');
+          enterFullscreen();
+        } else if (!isLandscape && isFullscreen) {
+          console.log('Mobile portrait detected, auto exiting fullscreen');
+          exitFullscreen();
+        }
+      }
+      // 其他小屏设备（平板等）的处理
+      else if (isSmallScreen && isLandscape && aspectRatio > 1.2 && !isFullscreen && unityInstance && isGameLoaded) {
+        console.log('Small screen landscape detected, auto entering fullscreen');
         enterFullscreen();
-      } else if (!isLandscape && isFullscreen && isSmallScreen) {
-        console.log('Portrait detected on small screen, auto exiting fullscreen');
-        exitFullscreen();
       }
     };
 
@@ -451,10 +447,11 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
       className={`unity-game-container ${className || ''}`}
       style={{
         width: '100%',
-        maxWidth: window.innerWidth > window.innerHeight && window.innerWidth <= 1024 ? '100vw' : '1024px',
+        maxWidth: isMobile ? '100vw' : '1024px',
         margin: '0 auto',
         textAlign: 'center',
-        padding: window.innerWidth > window.innerHeight && window.innerWidth <= 1024 ? '0' : '0 20px'
+        padding: isMobile ? '0 10px' : '0 20px',
+        boxSizing: 'border-box'
       }}
     >
       {error && (
@@ -518,7 +515,11 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           width: '100%',
           maxWidth: isMobile ? '100%' : '960px',
           margin: '0 auto',
-          padding: isMobile && !isFullscreen ? '0 10px' : '0',
+          padding: '0',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          flexDirection: 'column',
           // 全屏时的样式
           ...(isFullscreen && {
             position: 'fixed',
@@ -587,19 +588,16 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
             // Desktop: fixed size or fullscreen
             width: isFullscreen 
               ? '100vw'  // Always use viewport width for fullscreen
-              : ((isMobile || window.innerWidth <= 1024) ? 
-                  (window.innerWidth > window.innerHeight ? '95vw' : '90vw') : '960px'),
+              : (isMobile ? '100%' : '960px'), // 移动端使用100%让容器控制尺寸
             height: isFullscreen 
               ? '100vh'  // Always use viewport height for fullscreen
-              : ((isMobile || window.innerWidth <= 1024) ? 'auto' : '600px'),
+              : (isMobile ? 'auto' : '600px'),
             maxWidth: isFullscreen 
               ? 'none' 
-              : ((isMobile || window.innerWidth <= 1024) ? 
-                  (window.innerWidth > window.innerHeight ? '95vw' : '90vw') : '960px'),
+              : (isMobile ? '100%' : '960px'),
             maxHeight: isFullscreen 
               ? 'none' 
-              : ((isMobile || window.innerWidth <= 1024) ? 
-                  (window.innerWidth > window.innerHeight ? '85vh' : '70vh') : '600px'),
+              : 'none', // 让高度自动计算
             background: '#231F20',
             display: error ? 'none' : 'block',
             border: isFullscreen ? 'none' : '1px solid #444',
@@ -608,6 +606,8 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
             // 防止浏览器默认的触摸行为
             touchAction: 'none',
             userSelect: 'none',
+            // 确保Canvas居中且不溢出
+            margin: '0 auto',
             // 全屏时填充整个屏幕
             ...(isFullscreen && {
               width: '100vw',
