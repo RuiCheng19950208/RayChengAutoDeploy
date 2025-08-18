@@ -236,11 +236,32 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           
           canvas.width = targetWidth;
           canvas.height = targetHeight;
-          canvas.style.width = '100vw';
-          canvas.style.height = '100vh';
+          // 移动端全屏：使用dvh而不是vh，避免地址栏影响
+          // 先设置fallback值，再设置新标准
+          canvas.style.width = '100vw'; // fallback
+          canvas.style.height = '100vh'; // fallback
+          // 如果浏览器支持dvh，则使用dvh
+          if (CSS.supports('height', '100dvh')) {
+            canvas.style.width = '100dvw'; // 动态视口宽度
+            canvas.style.height = '100dvh'; // 动态视口高度，排除地址栏
+          }
           canvas.style.maxWidth = 'none';
           canvas.style.maxHeight = 'none';
+          canvas.style.minWidth = '100vw'; // fallback
+          canvas.style.minHeight = '100vh'; // fallback
+          if (CSS.supports('height', '100dvh')) {
+            canvas.style.minWidth = '100dvw';
+            canvas.style.minHeight = '100dvh';
+          }
           canvas.style.objectFit = 'fill'; // 移动端完全填充
+          // 确保高分辨率生效
+          canvas.style.imageRendering = 'auto'; // 使用浏览器最佳渲染
+          // 处理安全区域
+          canvas.style.paddingTop = 'env(safe-area-inset-top, 0)';
+          canvas.style.paddingBottom = 'env(safe-area-inset-bottom, 0)';
+          canvas.style.paddingLeft = 'env(safe-area-inset-left, 0)';
+          canvas.style.paddingRight = 'env(safe-area-inset-right, 0)';
+          canvas.style.boxSizing = 'border-box';
           
           // 更新状态
           setCanvasResolution({ width: targetWidth, height: targetHeight });
@@ -251,7 +272,13 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
             baseSize: `${baseWidth}x${baseHeight}`,
             finalSize: `${targetWidth}x${targetHeight}`,
             minStandard: `${minWidth}x${minHeight}`,
-            maxLimit: `${maxWidth}x${maxHeight}`
+            maxLimit: `${maxWidth}x${maxHeight}`,
+            cssStyle: {
+              width: canvas.style.width,
+              height: canvas.style.height,
+              maxWidth: canvas.style.maxWidth,
+              maxHeight: canvas.style.maxHeight
+            }
           });
         } else {
           // 桌面端：严格限制最大分辨率为1920x1080，保持游戏比例
@@ -259,7 +286,13 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           canvas.style.height = '100vh';
           canvas.style.maxWidth = 'none';
           canvas.style.maxHeight = 'none';
+          canvas.style.minWidth = '100vw';
+          canvas.style.minHeight = '100vh';
           canvas.style.objectFit = 'contain'; // 桌面端保持比例
+          canvas.style.imageRendering = 'auto'; // 使用浏览器最佳渲染
+          // 桌面端重置安全区域
+          canvas.style.padding = '0';
+          canvas.style.boxSizing = 'content-box';
           
           const gameAspectRatio = 960 / 600; // 16:10
           const maxWidth = 1920;
@@ -840,10 +873,10 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
             // Mobile landscape: true fullscreen
             // Desktop: fixed size or fullscreen
             width: isFullscreen 
-              ? '100vw'  // Always use viewport width for fullscreen
+              ? (isMobile ? '100dvw' : '100vw')  // 移动端使用动态视口，桌面端使用标准视口
               : (isMobile ? '100%' : '960px'), // 移动端使用100%让容器控制尺寸
             height: isFullscreen 
-              ? '100vh'  // Always use viewport height for fullscreen
+              ? (isMobile ? '100dvh' : '100vh')  // 移动端使用动态视口高度
               : (isMobile ? 'auto' : '600px'),
             maxWidth: isFullscreen 
               ? 'none' 
@@ -851,11 +884,22 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
             maxHeight: isFullscreen 
               ? 'none' 
               : 'none', // 让高度自动计算
+            // 关键：确保Canvas不被父容器限制
+            minWidth: isFullscreen ? (isMobile ? '100dvw' : '100vw') : 'auto',
+            minHeight: isFullscreen ? (isMobile ? '100dvh' : '100vh') : 'auto',
+            // 移动端全屏时处理安全区域
+            ...(isFullscreen && isMobile && {
+              paddingTop: 'env(safe-area-inset-top, 0)',
+              paddingBottom: 'env(safe-area-inset-bottom, 0)',
+              paddingLeft: 'env(safe-area-inset-left, 0)',
+              paddingRight: 'env(safe-area-inset-right, 0)',
+              boxSizing: 'border-box'
+            }),
             background: '#231F20',
             display: error ? 'none' : 'block',
             border: isFullscreen ? 'none' : '1px solid #444',
-            // 确保Canvas不被缩放，保持1:1像素比
-            imageRendering: 'pixelated',
+            // 确保Canvas不被缩放，在全屏时使用最佳渲染
+            imageRendering: isFullscreen ? 'auto' : 'pixelated',
             // 防止浏览器默认的触摸行为
             touchAction: 'none',
             userSelect: 'none',
@@ -873,13 +917,22 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
                 position: 'fixed',
                 top: 0,
                 left: 0,
+                width: '100dvw !important',  // 强制使用动态视口宽度
+                height: '100dvh !important', // 强制使用动态视口高度
                 zIndex: 10000,
                 touchAction: 'manipulation', // 允许游戏内的触摸操作
                 WebkitTouchCallout: 'none', // iOS：禁用长按菜单
                 WebkitUserSelect: 'none',   // iOS：禁用文本选择
                 WebkitTapHighlightColor: 'transparent', // iOS：禁用点击高亮
                 msContentZooming: 'none',   // IE：禁用缩放
-                msTouchAction: 'manipulation' // IE：触摸操作
+                msTouchAction: 'manipulation', // IE：触摸操作
+                imageRendering: 'auto',  // 确保高分辨率渲染
+                // 处理安全区域边距
+                paddingTop: 'env(safe-area-inset-top, 0)',
+                paddingBottom: 'env(safe-area-inset-bottom, 0)',
+                paddingLeft: 'env(safe-area-inset-left, 0)',
+                paddingRight: 'env(safe-area-inset-right, 0)',
+                boxSizing: 'border-box'
               })
             })
           }}
