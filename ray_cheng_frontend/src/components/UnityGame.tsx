@@ -198,9 +198,26 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
         const actualHeight = Math.floor(screenHeight * devicePixelRatio);
 
         if (isMobile) {
-          // 移动端：设置为设备实际分辨率
-          canvas.width = actualWidth;
-          canvas.height = actualHeight;
+          // 移动端：严格限制最大分辨率为1920x1080，避免过度放大
+          const maxWidth = 1920;
+          const maxHeight = 1080;
+          
+          // 使用CSS尺寸作为基准，不使用devicePixelRatio避免过度放大
+          let targetWidth = screenWidth;
+          let targetHeight = screenHeight;
+          
+          // 如果超过最大限制，按比例缩小
+          if (targetWidth > maxWidth || targetHeight > maxHeight) {
+            const scaleX = maxWidth / targetWidth;
+            const scaleY = maxHeight / targetHeight;
+            const scale = Math.min(scaleX, scaleY);
+            
+            targetWidth = Math.floor(targetWidth * scale);
+            targetHeight = Math.floor(targetHeight * scale);
+          }
+          
+          canvas.width = targetWidth;
+          canvas.height = targetHeight;
           canvas.style.width = '100vw';
           canvas.style.height = '100vh';
           canvas.style.maxWidth = 'none';
@@ -208,34 +225,47 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           canvas.style.objectFit = 'fill'; // 移动端完全填充
           
           // 更新状态
-          setCanvasResolution({ width: actualWidth, height: actualHeight });
+          setCanvasResolution({ width: targetWidth, height: targetHeight });
           
-          console.log('Mobile fullscreen canvas resolution:', {
+          console.log('Mobile fullscreen canvas resolution (safe):', {
             cssSize: `${screenWidth}x${screenHeight}`,
-            canvasSize: `${actualWidth}x${actualHeight}`,
-            devicePixelRatio,
-            originalSize: '960x600'
+            finalSize: `${targetWidth}x${targetHeight}`,
+            maxLimit: `${maxWidth}x${maxHeight}`,
+            devicePixelRatio: devicePixelRatio
           });
         } else {
-          // 桌面端：保持比例的同时尽可能大
+          // 桌面端：严格限制最大分辨率为1920x1080，保持游戏比例
           canvas.style.width = '100vw';
           canvas.style.height = '100vh';
           canvas.style.maxWidth = 'none';
           canvas.style.maxHeight = 'none';
           canvas.style.objectFit = 'contain'; // 桌面端保持比例
           
-          // 桌面端也可以提升分辨率，但保持游戏比例
-          const gameAspectRatio = 960 / 600;
+          const gameAspectRatio = 960 / 600; // 16:10
+          const maxWidth = 1920;
+          const maxHeight = 1080;
+          
+          // 计算基于屏幕尺寸的目标分辨率，但保持游戏比例
           let targetWidth, targetHeight;
           
           if (screenWidth / screenHeight > gameAspectRatio) {
             // 屏幕更宽，以高度为准
-            targetHeight = Math.floor(screenHeight * devicePixelRatio);
+            targetHeight = Math.min(screenHeight, maxHeight);
             targetWidth = Math.floor(targetHeight * gameAspectRatio);
           } else {
             // 屏幕更高，以宽度为准
-            targetWidth = Math.floor(screenWidth * devicePixelRatio);
+            targetWidth = Math.min(screenWidth, maxWidth);
             targetHeight = Math.floor(targetWidth / gameAspectRatio);
+          }
+          
+          // 最终检查不要超过最大限制
+          if (targetWidth > maxWidth) {
+            targetWidth = maxWidth;
+            targetHeight = Math.floor(targetWidth / gameAspectRatio);
+          }
+          if (targetHeight > maxHeight) {
+            targetHeight = maxHeight;
+            targetWidth = Math.floor(targetHeight * gameAspectRatio);
           }
           
           canvas.width = targetWidth;
@@ -243,6 +273,13 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           
           // 更新状态
           setCanvasResolution({ width: targetWidth, height: targetHeight });
+          
+          console.log('Desktop fullscreen canvas resolution (safe):', {
+            cssSize: `${screenWidth}x${screenHeight}`,
+            finalSize: `${targetWidth}x${targetHeight}`,
+            maxLimit: `${maxWidth}x${maxHeight}`,
+            gameAspectRatio
+          });
         }
         
         canvas.style.position = 'static';  // 重置positioning，让容器处理定位
