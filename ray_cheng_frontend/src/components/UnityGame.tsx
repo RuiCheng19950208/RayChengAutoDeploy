@@ -64,6 +64,9 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
               companyName: 'RayCheng',
               productName: 'Super Hexagon',
               productVersion: '1.0',
+              // WebGL 特定配置
+              matchWebGLToCanvasSize: true,
+              devicePixelRatio: 1,
             };
 
             const instance = await window.createUnityInstance(
@@ -213,10 +216,16 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           ref={canvasRef}
           id="unity-canvas"
           style={{
-            width: '100%',
-            height: 'auto',
+            width: '960px',
+            height: '600px',
             background: '#231F20',
-            display: error ? 'none' : 'block'
+            display: error ? 'none' : 'block',
+            border: '1px solid #444',
+            // 确保Canvas不被缩放，保持1:1像素比
+            imageRendering: 'pixelated',
+            // 防止浏览器默认的触摸行为
+            touchAction: 'none',
+            userSelect: 'none'
           }}
           width={960}
           height={600}
