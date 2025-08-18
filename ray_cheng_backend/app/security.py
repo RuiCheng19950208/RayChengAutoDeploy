@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from jose import jwt
+from jose import jwt, JWTError
 from passlib.context import CryptContext
 import os
 
@@ -27,5 +27,19 @@ def create_access_token(subject: str, expires_delta: Optional[timedelta] = None)
 	expire_at = datetime.now(timezone.utc) + expires_delta
 	to_encode = {"sub": subject, "exp": expire_at}
 	return jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+
+
+def verify_token(token: str) -> Optional[str]:
+	"""验证JWT token并返回用户ID"""
+	try:
+		payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+		user_id: str = payload.get("sub")
+		if user_id is None:
+			return None
+		return user_id
+	except JWTError:
+		return None
+
+
 
 

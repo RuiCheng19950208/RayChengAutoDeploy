@@ -127,3 +127,12 @@
     font-size: 16px;
   }
 }
+
+/* 密码提示样式 */
+.password-hint {
+  display: block;
+  margin-top: 5px;
+  color: #666;
+  font-size: 12px;
+  font-style: italic;
+}
