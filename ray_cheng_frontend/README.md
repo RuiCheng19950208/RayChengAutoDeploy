@@ -1,84 +1,107 @@
-# 任务管理系统 - 前端
+# Ray Cheng Super Hexagon - Frontend
 
-这是一个使用React + TypeScript构建的任务管理系统前端应用。
+React + TypeScript web application for the Super Hexagon game platform with user management and leaderboards.
 
-## 🚀 功能特性
+## 🎮 Features
 
-- ✅ 用户登录界面
-- ✅ 响应式设计
-- ✅ 现代化UI设计
-- ✅ TypeScript支持
+- **Unity WebGL Game**: Embedded Super Hexagon game with touch controls
+- **User Authentication**: Login/Register system with JWT tokens
+- **Leaderboards**: Real-time score rankings and submission
+- **Admin Panel**: User management interface for administrators
+- **Responsive Design**: Mobile-friendly interface
+- **Auto-login**: Seamless registration-to-login flow
 
-## 🛠️ 技术栈
+## 🛠️ Tech Stack
 
-- **React 18** - 用户界面库
-- **TypeScript** - 类型安全的JavaScript
-- **CSS3** - 样式和动画
-- **HTML5** - 语义化标记
+- **React 18** - UI framework with hooks
+- **TypeScript** - Type-safe JavaScript
+- **Unity WebGL** - Game integration
+- **CSS3** - Modern styling and animations
+- **Fetch API** - Backend communication
 
-## 📁 项目结构
+## 📁 Project Structure
 
 ```
 src/
-├── components/          # 组件目录
-│   ├── Login.tsx       # 登录组件
-│   └── Login.css       # 登录组件样式
-├── App.tsx             # 主应用组件
-├── App.css             # 主应用样式
-├── index.tsx           # 应用入口点
-└── index.css           # 全局样式
+├── components/
+│   ├── Login.tsx           # Login form
+│   ├── Register.tsx        # Registration form
+│   ├── Dashboard.tsx       # Main user dashboard
+│   ├── Leaderboard.tsx     # Score rankings
+│   ├── AdminPanel.tsx      # Admin user management
+│   ├── UnityGame.tsx       # Unity game wrapper
+│   └── Login.css           # Component styling
+├── App.tsx                 # Main application logic
+├── config.ts               # API configuration
+└── index.tsx               # Application entry point
 ```
 
-## 🚀 快速开始
+## 🚀 Quick Start
 
-### 安装依赖
+### Install Dependencies
 ```bash
+cd ray_cheng_frontend
 npm install
 ```
 
-### 启动开发服务器
+### Start Development Server
 ```bash
 npm start
 ```
 
-应用将在 [http://localhost:3000](http://localhost:3000) 启动
+Application runs at [http://localhost:3000](http://localhost:3000)
 
-### 构建生产版本
+### Build for Production
 ```bash
 npm run build
 ```
 
-## 🎨 组件说明
+## 🎯 Key Components
 
-### Login组件
-- 用户名和密码输入
-- 表单验证
-- 登录状态管理
-- 响应式设计
+### Dashboard
+- Unity game integration
+- User profile display
+- Leaderboard access
+- Admin panel button (admin users only)
 
-### App组件
-- 应用状态管理
-- 登录/登出逻辑
-- 仪表板界面
+### Unity Integration
+- WebGL game embedding
+- Score submission to backend
+- Touch control support
+- Automatic score tracking
 
-## 🔧 开发说明
+### Admin Panel
+- User list with management controls
+- Platform statistics
+- User deletion with confirmations
+- Role-based access control
 
-目前这是一个纯前端应用，登录功能是模拟的：
-- 输入任意用户名和密码即可登录
-- 登录后会显示简单的仪表板界面
-- 可以点击"退出登录"返回登录界面
+## 🔧 Configuration
 
-## 📱 响应式设计
+### API Settings
+The app automatically detects the backend URL:
+- Development: `http://localhost:8000`
+- Production: Same domain as frontend
 
-- 支持桌面端和移动端
-- 自适应布局
-- 触摸友好的交互
+### Unity Game
+- Embedded WebGL build
+- Automatic score submission
+- No user authentication required in Unity
+- Frontend handles all backend communication
 
-## 🚀 下一步计划
+## 📱 Responsive Design
 
-- [ ] 集成后端API
-- [ ] 添加用户注册功能
-- [ ] 实现任务管理功能
-- [ ] 添加项目管理系统
-- [ ] 集成数据库
-- [ ] 部署到Vercel
+- Desktop and mobile support
+- Touch-friendly game controls
+- Adaptive layout system
+- Modern UI/UX patterns
+
+## 🚀 Deployment
+
+Ready for deployment on:
+- Vercel
+- Netlify  
+- Render
+- Any static hosting platform
+
+Environment configuration handled automatically for different deployment platforms.

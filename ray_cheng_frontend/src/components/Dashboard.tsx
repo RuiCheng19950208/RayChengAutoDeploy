@@ -30,6 +30,10 @@ const Dashboard: React.FC<DashboardProps> = ({ username, userRole, onLogout, onS
       </header>
       
       <main className="dashboard-content">
+        <div className="leaderboard-section">
+          <Leaderboard />
+        </div>
+        
         <div className="game-section">
           <h2>🎮 Super Hexagon Game</h2>
           <p>Enjoy Ray Cheng's amazing Super Hexagon game! Click to play and challenge yourself.</p>
@@ -128,10 +132,6 @@ const Dashboard: React.FC<DashboardProps> = ({ username, userRole, onLogout, onS
               </ul>
             </div>
           </div>
-        </div>
-        
-        <div className="leaderboard-section">
-          <Leaderboard />
         </div>
         
         <div className="features-section">
