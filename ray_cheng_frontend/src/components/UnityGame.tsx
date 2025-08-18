@@ -101,7 +101,7 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
       }
 
       // Force canvas reflow
-      canvas.offsetHeight;
+      void canvas.offsetHeight;
       
       // Notify Unity about canvas size change if possible
       try {
@@ -314,7 +314,7 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
         }
       }
     };
-  }, []);
+  }, [unityInstance]);
 
   const handleRetry = () => {
     setError('');
