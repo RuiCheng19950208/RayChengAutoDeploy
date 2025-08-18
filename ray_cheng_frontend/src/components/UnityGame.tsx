@@ -773,7 +773,23 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           console.log('Mobile portrait detected, auto exiting fullscreen');
           exitFullscreen();
         } else if (isLandscape) {
+          // 🔧 检查实际全屏状态是否匹配
+          const actuallyFullscreen = !!document.fullscreenElement;
+          const stateMatches = isFullscreen === actuallyFullscreen;
+          
           addDebugInfo(`❌ 横屏但未触发全屏: 比例${aspectRatio.toFixed(2)}>1.1? ${aspectRatio > 1.1} 非全屏? ${!isFullscreen} Unity? ${!!unityInstance} 加载? ${isGameLoaded}`);
+          
+          // 🚨 如果状态不匹配，强制修复
+          if (!stateMatches) {
+            addDebugInfo(`🔧 状态不匹配修复: isFullscreen=${isFullscreen} 实际=${actuallyFullscreen}`);
+            setIsFullscreen(actuallyFullscreen);
+            
+            // 如果实际不是全屏，但状态认为是全屏，强制进入全屏
+            if (!actuallyFullscreen && isFullscreen) {
+              addDebugInfo(`🚀 强制进入全屏模式`);
+              setTimeout(() => enterFullscreen(), 100);
+            }
+          }
         }
       }
       // 其他小屏设备（平板等）的处理
