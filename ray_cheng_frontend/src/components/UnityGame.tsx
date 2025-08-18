@@ -314,28 +314,16 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           let targetWidth, targetHeight;
           
           if (isFullscreen) {
-            // 全屏移动端：充分利用物理分辨率，但限制在合理范围内
-            // 目标：接近物理分辨率，但不超过1920×1080以保证性能
+            // 移动端全屏：关键修复 - Canvas分辨率必须接近CSS显示尺寸
+            // 只有接近1:1比例才能显示完整游戏内容
             
-            const maxWidth = 1920;
-            const maxHeight = 1080;
+            // 使用CSS显示尺寸，加上适度的质量提升
+            const qualityBoost = 1.3; // 30%质量提升，平衡画质和完整显示
             
-            // 如果物理分辨率合理，使用物理分辨率的80%（既利用高分辨率又保证性能）
-            let idealWidth = Math.floor(physicalDisplayWidth * 0.8);
-            let idealHeight = Math.floor(physicalDisplayHeight * 0.8);
+            targetWidth = Math.floor(cssDisplayWidth * qualityBoost);
+            targetHeight = Math.floor(cssDisplayHeight * qualityBoost);
             
-            // 限制最大值
-            targetWidth = Math.min(idealWidth, maxWidth);
-            targetHeight = Math.min(idealHeight, maxHeight);
-            
-            // 确保不低于合理的最小值
-            const minWidth = Math.floor(cssDisplayWidth * 1.5);
-            const minHeight = Math.floor(cssDisplayHeight * 1.5);
-            
-            targetWidth = Math.max(targetWidth, minWidth);
-            targetHeight = Math.max(targetHeight, minHeight);
-            
-            addDebugInfo(`📱 全屏高分辨率: 物理${physicalDisplayWidth}×${physicalDisplayHeight} → Canvas${targetWidth}×${targetHeight}`);
+            addDebugInfo(`📱 比例修复: CSS${cssDisplayWidth}×${cssDisplayHeight} → Canvas${targetWidth}×${targetHeight} (${qualityBoost}x)`);
           } else {
             // 非全屏：基于窗口尺寸
             targetWidth = Math.floor(cssDisplayWidth * 1.2);
