@@ -288,15 +288,22 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           
           const deviceAspectRatio = screenWidth / screenHeight;
           
-          console.log(`🚨 调试信息 - 分辨率设置前:`, {
-            cssScreenSize: `${cssScreenWidth}×${cssScreenHeight}`,
-            physicalScreenSize: `${physicalScreenWidth}×${physicalScreenHeight}`,
-            devicePixelRatio: devicePixelRatio,
-            screenWidthUsed: screenWidth,
-            screenHeightUsed: screenHeight,
-            isLandscape: screenWidth > screenHeight,
-            currentCanvasSize: `${canvasRef.current?.width || 'unknown'}×${canvasRef.current?.height || 'unknown'}`
-          });
+          // 🔍 深度调试：CSS逻辑像素异常低的原因分析
+          const debugInfo = {
+            '🌐 window.innerWidth/Height': `${window.innerWidth}×${window.innerHeight}`,
+            '📺 window.outerWidth/Height': `${window.outerWidth}×${window.outerHeight}`,
+            '🖥️ screen.width/height': `${screen.width}×${screen.height}`,
+            '📱 screen.availWidth/Height': `${screen.availWidth}×${screen.availHeight}`,
+            '🔍 devicePixelRatio': devicePixelRatio,
+            '📐 计算的物理分辨率': `${physicalScreenWidth}×${physicalScreenHeight}`,
+            '🎯 最终使用的screenWidth/Height': `${screenWidth}×${screenHeight}`,
+            '🔄 是否横屏': screenWidth > screenHeight,
+            '🎮 当前Canvas尺寸': `${canvasRef.current?.width || 'unknown'}×${canvasRef.current?.height || 'unknown'}`,
+            '🚨 CSS vs 物理对比': `CSS:${cssScreenWidth}×${cssScreenHeight} vs 物理:${physicalScreenWidth}×${physicalScreenHeight}`
+          };
+          
+          console.log(`🚨 CSS逻辑像素异常调试:`, debugInfo);
+          addDebugInfo(`🔍 CSS逻辑像素调试: inner${window.innerWidth}×${window.innerHeight} screen${screen.width}×${screen.height} ratio${devicePixelRatio}`);
           
           addDebugInfo(`📐 屏幕尺寸: ${screenWidth}×${screenHeight} 宽高比:${deviceAspectRatio.toFixed(2)}`);
           
@@ -314,16 +321,46 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           let targetWidth, targetHeight;
           
           if (isFullscreen) {
-            // 移动端全屏：关键修复 - Canvas分辨率必须接近CSS显示尺寸
-            // 只有接近1:1比例才能显示完整游戏内容
+            // 🚀 全屏模式：摆脱浏览器viewport限制，使用设备真实分辨率能力
+            const isLandscapeMode = screenWidth > screenHeight;
             
-            // 使用CSS显示尺寸，加上适度的质量提升
-            const qualityBoost = 1.3; // 30%质量提升，平衡画质和完整显示
+            if (isLandscapeMode) {
+              // 🎮 横屏全屏：专用高分辨率策略
+              // 直接使用设备的真实物理分辨率，不受CSS逻辑像素限制
+              
+              // 获取设备真实屏幕尺寸（忽略浏览器viewport限制）
+              // eslint-disable-next-line no-restricted-globals
+              const realScreenWidth = Math.max(screen.width, screen.height); // 横屏时取较大值
+              // eslint-disable-next-line no-restricted-globals  
+              const realScreenHeight = Math.min(screen.width, screen.height); // 横屏时取较小值
+              
+              // 目标：游戏专用的高分辨率配置
+              const gameOptimalWidth = 1920;  // 游戏最佳宽度
+              const gameOptimalHeight = 1080; // 游戏最佳高度
+              
+              // 如果设备分辨率足够高，直接使用游戏最佳分辨率
+              if (realScreenWidth >= gameOptimalWidth && realScreenHeight >= gameOptimalHeight) {
+                targetWidth = gameOptimalWidth;
+                targetHeight = gameOptimalHeight;
+                addDebugInfo(`🎮 横屏专用: 使用游戏最佳分辨率 ${targetWidth}×${targetHeight}`);
+              } else {
+                // 设备分辨率不够，使用设备最大能力
+                targetWidth = realScreenWidth;
+                targetHeight = realScreenHeight;
+                addDebugInfo(`🎮 横屏专用: 使用设备最大分辨率 ${targetWidth}×${targetHeight}`);
+              }
+              
+              addDebugInfo(`📱 真实屏幕尺寸: ${realScreenWidth}×${realScreenHeight} (突破viewport限制)`);
+              
+            } else {
+              // 📱 竖屏全屏：保守策略，基于当前视口
+              targetWidth = Math.floor(physicalDisplayWidth * 0.8);
+              targetHeight = Math.floor(physicalDisplayHeight * 0.8);
+              addDebugInfo(`📱 竖屏全屏: 使用视口${targetWidth}×${targetHeight}`);
+            }
             
-            targetWidth = Math.floor(cssDisplayWidth * qualityBoost);
-            targetHeight = Math.floor(cssDisplayHeight * qualityBoost);
-            
-            addDebugInfo(`📱 比例修复: CSS${cssDisplayWidth}×${cssDisplayHeight} → Canvas${targetWidth}×${targetHeight} (${qualityBoost}x)`);
+            // 重要：全屏模式CSS策略
+            addDebugInfo(`🎨 全屏CSS策略: objectFit=contain, 完全覆盖视口, 高质量缩放`);
           } else {
             // 非全屏：基于窗口尺寸
             targetWidth = Math.floor(cssDisplayWidth * 1.2);
@@ -1020,11 +1057,11 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
               boxSizing: 'content-box',
               imageRendering: 'auto',
               
-                            // 移动端：使用固定定位填充整个屏幕，但保持游戏宽高比
+                            // 移动端：横屏全屏专用优化
               ...(isMobile && {
                 position: 'fixed',
-              top: 0,
-              left: 0,
+                top: 0,
+                left: 0,
                 width: '100vw',
                 height: '100vh',
                 maxWidth: 'none',
@@ -1032,7 +1069,10 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
                 minWidth: '100vw',
                 minHeight: '100vh',
                 zIndex: 10000,
-                objectFit: 'contain', // 关键修复：保持宽高比，避免UI变形
+                // 🎮 横屏全屏：优化显示策略
+                objectFit: window.innerWidth > window.innerHeight ? 'cover' : 'contain',
+                // cover: 横屏时充满屏幕，可能裁剪边缘但画质最佳
+                // contain: 竖屏时完整显示，保持宽高比
                 // 使用支持检测的dvh
                 ...(CSS.supports('height', '100dvh') && {
                   width: '100dvw',
