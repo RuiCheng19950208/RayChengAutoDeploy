@@ -125,25 +125,27 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
     };
   }, [isFullscreen, exitFullscreen]);
 
-  // Mobile orientation change detection - auto exit fullscreen on portrait
+  // Mobile orientation change detection - auto fullscreen/exit based on orientation
   useEffect(() => {
     if (!isMobile) return;
 
     const handleOrientationChange = () => {
       setTimeout(() => {
         const isLandscape = window.innerWidth > window.innerHeight;
-        console.log('Orientation change detected:', { isLandscape, isFullscreen, width: window.innerWidth, height: window.innerHeight });
+        console.log('Mobile orientation change detected:', { isLandscape, isFullscreen, width: window.innerWidth, height: window.innerHeight });
         
-        // Auto-fullscreen on landscape is disabled - user needs to manually click fullscreen button
-        // But auto-exit on portrait is enabled for better UX
-        if (!isLandscape && isFullscreen) {
-          console.log('Portrait detected, auto exiting fullscreen');
+        // Auto fullscreen on landscape, auto exit on portrait for mobile
+        if (isLandscape && !isFullscreen && unityInstance) {
+          console.log('Mobile landscape detected, auto entering fullscreen');
+          enterFullscreen();
+        } else if (!isLandscape && isFullscreen) {
+          console.log('Mobile portrait detected, auto exiting fullscreen');
           exitFullscreen();
         }
       }, 300);
     };
 
-    // Monitor orientation changes
+    // Monitor orientation changes for mobile auto-fullscreen
     window.addEventListener('orientationchange', handleOrientationChange);
     window.addEventListener('resize', handleOrientationChange);
 
@@ -151,7 +153,7 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
       window.removeEventListener('orientationchange', handleOrientationChange);
       window.removeEventListener('resize', handleOrientationChange);
     };
-  }, [isMobile, isFullscreen, exitFullscreen]);
+  }, [isMobile, isFullscreen, unityInstance, enterFullscreen, exitFullscreen]);
 
   useEffect(() => {
     let isMounted = true;
@@ -334,8 +336,9 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
         style={{
           position: 'relative',
           width: '100%',
-          maxWidth: '960px',
+          maxWidth: isMobile ? '100%' : '960px',
           margin: '0 auto',
+          padding: isMobile && !isFullscreen ? '0 10px' : '0',
           // 全屏时的样式
           ...(isFullscreen && {
             position: 'fixed',
@@ -345,6 +348,7 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
             height: '100vh',
             maxWidth: 'none',
             margin: 0,
+            padding: 0,
             background: '#000',
             zIndex: 9999,
             display: 'flex',
@@ -353,8 +357,8 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           })
         }}
       >
-        {/* 全屏按钮 - 移动端和桌面端都显示 */}
-        {!error && (
+        {/* 全屏按钮 - 仅桌面端显示 */}
+        {!error && !isMobile && (
           <button
             onClick={isFullscreen ? exitFullscreen : enterFullscreen}
             style={{
@@ -366,14 +370,14 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
               color: 'white',
               border: '2px solid rgba(255, 255, 255, 0.3)',
               borderRadius: '8px',
-              padding: isMobile ? '12px 16px' : '8px 12px',
+              padding: '8px 12px',
               cursor: 'pointer',
-              fontSize: isMobile ? '16px' : '14px',
+              fontSize: '14px',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
               transition: 'all 0.3s ease',
-              minWidth: isMobile ? '80px' : '60px',
+              minWidth: '60px',
               fontWeight: 'bold'
             }}
             onMouseEnter={(e) => {
@@ -384,11 +388,10 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
               e.currentTarget.style.background = 'rgba(0, 0, 0, 0.8)';
               e.currentTarget.style.transform = 'scale(1)';
             }}
-            title={isFullscreen ? (isMobile ? 'Exit Fullscreen (Click or Rotate to Portrait)' : 'Exit Fullscreen (ESC or Click)') : `Enter Fullscreen${isMobile ? ' (Landscape)' : ''}`}
+            title={isFullscreen ? 'Exit Fullscreen (ESC or Click)' : 'Enter Fullscreen'}
           >
             {isFullscreen ? '❌' : '⛶'}
             {isFullscreen ? 'Exit' : 'Full'}
-            {isMobile && !isFullscreen && ' 🔄'}
           </button>
         )}
 
@@ -396,10 +399,21 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           ref={canvasRef}
           id="unity-canvas"
           style={{
-            width: isFullscreen ? (isMobile ? '100vh' : '100vw') : '960px',
-            height: isFullscreen ? (isMobile ? '100vw' : '100vh') : '600px',
-            maxWidth: isFullscreen ? 'none' : '960px',
-            maxHeight: isFullscreen ? 'none' : '600px',
+            // Mobile portrait: fit to screen width, maintain aspect ratio
+            // Mobile landscape: fullscreen
+            // Desktop: fixed size or fullscreen
+            width: isFullscreen 
+              ? (isMobile ? '100vh' : '100vw') 
+              : (isMobile ? '100%' : '960px'),
+            height: isFullscreen 
+              ? (isMobile ? '100vw' : '100vh') 
+              : (isMobile ? 'auto' : '600px'),
+            maxWidth: isFullscreen 
+              ? 'none' 
+              : (isMobile ? '100%' : '960px'),
+            maxHeight: isFullscreen 
+              ? 'none' 
+              : (isMobile ? `${(window.innerWidth * 600) / 960}px` : '600px'),
             background: '#231F20',
             display: error ? 'none' : 'block',
             border: isFullscreen ? 'none' : '1px solid #444',
@@ -432,7 +446,7 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
             borderRadius: '20px',
             pointerEvents: 'none'
           }}>
-            {isMobile ? 'Rotate to portrait or click top-right button to exit fullscreen' : 'Press ESC key or click top-right button to exit fullscreen'}
+            {isMobile ? 'Rotate device to portrait to exit fullscreen' : 'Press ESC key or click top-right button to exit fullscreen'}
           </div>
         )}
       </div>
@@ -449,7 +463,7 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           <p>Unity WebGL game will start soon...</p>
           {isMobile && (
             <p style={{ fontSize: '14px', color: '#aaa', marginTop: '10px' }}>
-              💡 Tip: Game supports landscape fullscreen mode
+              💡 Tip: Rotate to landscape for automatic fullscreen mode
             </p>
           )}
         </div>
@@ -466,7 +480,7 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           margin: '15px 0',
           fontSize: '14px'
         }}>
-          📱 <strong>Mobile Tip:</strong> Click the fullscreen button or use landscape mode for best experience
+          📱 <strong>Mobile Tip:</strong> Rotate to landscape for automatic fullscreen mode and best gaming experience
         </div>
       )}
 
