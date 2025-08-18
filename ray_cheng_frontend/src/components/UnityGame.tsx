@@ -227,10 +227,46 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           '🎯 用于计算': `${physicalScreenWidth}×${physicalScreenHeight} (真实物理分辨率)`
         });
         
-        // 关键修复：使用CSS逻辑像素而不是物理像素
-        // CSS显示区域是逻辑像素，Canvas分辨率也应该基于逻辑像素
-        const screenWidth = cssScreenWidth;
-        const screenHeight = cssScreenHeight;
+        // 关键修复：全屏时使用真实屏幕分辨率，非全屏时使用CSS逻辑像素
+        let screenWidth, screenHeight;
+        
+        if (isFullscreen) {
+          // 全屏时：强制使用真实的高分辨率
+          // 方案1：尝试获取screen.availWidth/Height（可用屏幕分辨率）
+          let availWidth = window.screen.availWidth || window.screen.width;
+          let availHeight = window.screen.availHeight || window.screen.height;
+          
+          // 方案2：使用物理分辨率
+          let physWidth = physicalScreenWidth;
+          let physHeight = physicalScreenHeight;
+          
+          // 选择更大的分辨率值
+          const candidate1 = Math.max(availWidth, availHeight);
+          const candidate2 = Math.max(physWidth, physHeight);
+          
+          if (candidate2 > candidate1) {
+            screenWidth = physWidth;
+            screenHeight = physHeight;
+            addDebugInfo(`🔧 选择物理分辨率: ${screenWidth}×${screenHeight} (${candidate2} > ${candidate1})`);
+          } else {
+            screenWidth = availWidth;
+            screenHeight = availHeight;
+            addDebugInfo(`🔧 选择可用分辨率: ${screenWidth}×${screenHeight} (${candidate1} >= ${candidate2})`);
+          }
+          
+          // 确保横屏方向正确：宽度应该大于高度
+          if (screenWidth < screenHeight) {
+            const temp = screenWidth;
+            screenWidth = screenHeight;
+            screenHeight = temp;
+            addDebugInfo(`🔄 调整为横屏方向: ${screenWidth}×${screenHeight}`);
+          }
+        } else {
+          // 非全屏时：使用CSS逻辑像素
+          screenWidth = cssScreenWidth;
+          screenHeight = cssScreenHeight;
+          addDebugInfo(`🔧 非全屏模式，使用CSS逻辑像素: ${screenWidth}×${screenHeight}`);
+        }
         
         // 物理分辨率仅用于日志显示
         // const actualWidth = Math.floor(screenWidth * devicePixelRatio);
