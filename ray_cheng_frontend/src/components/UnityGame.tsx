@@ -314,10 +314,28 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           let targetWidth, targetHeight;
           
           if (isFullscreen) {
-            // 全屏移动端：使用1280×720，确保性能和显示效果平衡
-            targetWidth = 1280;
-            targetHeight = 720;
-            addDebugInfo(`📱 移动端全屏: 使用${targetWidth}×${targetHeight}`);
+            // 全屏移动端：充分利用物理分辨率，但限制在合理范围内
+            // 目标：接近物理分辨率，但不超过1920×1080以保证性能
+            
+            const maxWidth = 1920;
+            const maxHeight = 1080;
+            
+            // 如果物理分辨率合理，使用物理分辨率的80%（既利用高分辨率又保证性能）
+            let idealWidth = Math.floor(physicalDisplayWidth * 0.8);
+            let idealHeight = Math.floor(physicalDisplayHeight * 0.8);
+            
+            // 限制最大值
+            targetWidth = Math.min(idealWidth, maxWidth);
+            targetHeight = Math.min(idealHeight, maxHeight);
+            
+            // 确保不低于合理的最小值
+            const minWidth = Math.floor(cssDisplayWidth * 1.5);
+            const minHeight = Math.floor(cssDisplayHeight * 1.5);
+            
+            targetWidth = Math.max(targetWidth, minWidth);
+            targetHeight = Math.max(targetHeight, minHeight);
+            
+            addDebugInfo(`📱 全屏高分辨率: 物理${physicalDisplayWidth}×${physicalDisplayHeight} → Canvas${targetWidth}×${targetHeight}`);
           } else {
             // 非全屏：基于窗口尺寸
             targetWidth = Math.floor(cssDisplayWidth * 1.2);
