@@ -201,9 +201,13 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
       
       const canvas = canvasRef.current;
       if (!canvas) {
-        console.log('❌ Canvas不存在，退出resizeCanvas');
+        addDebugInfo(`❌ Canvas不存在，退出resizeCanvas`);
         return;
       }
+      
+      // 添加执行路径跟踪
+      addDebugInfo(`📍 开始分辨率设置流程`);
+      addDebugInfo(`📍 window.innerWidth:${window.innerWidth} innerHeight:${window.innerHeight}`);
 
       if (isFullscreen) {
         // 获取设备的实际物理屏幕分辨率
@@ -272,7 +276,10 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
         // const actualWidth = Math.floor(screenWidth * devicePixelRatio);
         // const actualHeight = Math.floor(screenHeight * devicePixelRatio);
 
+        addDebugInfo(`📍 准备进入分支判断: isMobile=${isMobile}`);
+        
         if (isMobile) {
+          addDebugInfo(`📍 进入移动端分支`);
           // 移动端：保持游戏原始宽高比，避免UI变形
           const isLandscape = screenWidth > screenHeight;
           
@@ -466,9 +473,11 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
             }
           }, 200);
         } else {
+          addDebugInfo(`📍 进入桌面端分支`);
           // 桌面端：固定使用1920×1080分辨率
           const targetWidth = 1920;
           const targetHeight = 1080;
+          addDebugInfo(`🖥️ 桌面端固定分辨率: ${targetWidth}×${targetHeight}`);
           
           canvas.width = targetWidth;
           canvas.height = targetHeight;
