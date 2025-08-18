@@ -121,26 +121,45 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
-  // 沉浸式全屏效果：禁用页面滚动、锁定视角
+  // 横屏模式视角固定和沉浸式全屏效果
   useEffect(() => {
-    if (isFullscreen && isMobile) {
-      // 保存原始body样式
+    const isLandscape = window.innerWidth > window.innerHeight;
+    
+    if ((isFullscreen && isMobile) || (isMobile && isLandscape)) {
+      // 保存原始样式
       const originalBodyStyle = {
         overflow: document.body.style.overflow,
         position: document.body.style.position,
         width: document.body.style.width,
         height: document.body.style.height,
         touchAction: document.body.style.touchAction,
-        userSelect: document.body.style.userSelect
+        userSelect: document.body.style.userSelect,
+        top: document.body.style.top,
+        left: document.body.style.left
       };
 
-      // 设置沉浸式全屏样式
-      document.body.style.overflow = 'hidden'; // 禁止滚动
-      document.body.style.position = 'fixed'; // 固定位置，防止地址栏影响
+      // 获取当前滚动位置
+      const scrollY = window.scrollY;
+
+      // 设置固定视角样式
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`; // 保持当前滚动位置
+      document.body.style.left = '0';
       document.body.style.width = '100vw';
       document.body.style.height = '100vh';
-      document.body.style.touchAction = 'none'; // 禁用触摸手势
-      document.body.style.userSelect = 'none'; // 禁用文本选择
+      document.body.style.touchAction = 'none';
+      document.body.style.userSelect = 'none';
+
+      // 横屏模式下滚动到游戏组件位置
+      if (isLandscape && containerRef.current && !isFullscreen) {
+        setTimeout(() => {
+          containerRef.current?.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          });
+        }, 100);
+      }
 
       // 禁用页面缩放
       const viewport = document.querySelector('meta[name="viewport"]');
@@ -152,7 +171,7 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
       // 阻止默认的触摸事件
       const preventDefaultTouch = (e: TouchEvent) => {
         if (e.touches.length > 1) {
-          e.preventDefault(); // 防止多点触控缩放
+          e.preventDefault();
         }
       };
 
@@ -166,7 +185,7 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
       document.addEventListener('gesturechange', preventScroll, { passive: false });
       document.addEventListener('gestureend', preventScroll, { passive: false });
       
-      console.log('Immersive fullscreen mode activated');
+      console.log('Landscape view lock activated');
 
       return () => {
         // 恢复原始样式
@@ -176,6 +195,13 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
         document.body.style.height = originalBodyStyle.height;
         document.body.style.touchAction = originalBodyStyle.touchAction;
         document.body.style.userSelect = originalBodyStyle.userSelect;
+        document.body.style.top = originalBodyStyle.top;
+        document.body.style.left = originalBodyStyle.left;
+
+        // 恢复滚动位置
+        if (originalBodyStyle.position !== 'fixed') {
+          window.scrollTo(0, scrollY);
+        }
 
         // 恢复viewport设置
         if (viewport && originalViewport) {
@@ -188,10 +214,35 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
         document.removeEventListener('gesturechange', preventScroll);
         document.removeEventListener('gestureend', preventScroll);
         
-        console.log('Immersive fullscreen mode deactivated');
+        console.log('Landscape view lock deactivated');
       };
     }
   }, [isFullscreen, isMobile]);
+
+  // 监听窗口大小变化以处理横屏切换
+  useEffect(() => {
+    const handleResize = () => {
+      // 触发视角固定逻辑的重新评估
+      setTimeout(() => {
+        const isLandscape = window.innerWidth > window.innerHeight;
+        if (isMobile && isLandscape && !isFullscreen && containerRef.current) {
+          // 横屏模式下确保游戏组件在视图中心
+          containerRef.current.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          });
+        }
+      }, 200);
+    };
+
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+    };
+  }, [isMobile, isFullscreen]);
 
   // 简化的Canvas分辨率管理 - 使用DPR提升画质
   useEffect(() => {
@@ -601,8 +652,8 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           }}>
             {isMobile ? (
               <>
-                🎮 <strong>沉浸式游戏模式已激活</strong><br/>
-                旋转至竖屏可退出全屏
+                🎮 <strong>Immersive Game Mode Activated</strong><br/>
+                Rotate to portrait to exit fullscreen
               </>
             ) : (
               'Press ESC key or click top-right button to exit fullscreen'
@@ -641,7 +692,7 @@ const UnityGame: React.FC<UnityGameProps> = ({ className }) => {
           fontSize: '14px',
           textAlign: 'center'
         }}>
-          📱 <strong>移动端提示:</strong> 横屏旋转自动进入全屏游戏模式，获得最佳游戏体验
+          📱 <strong>Mobile Tip:</strong> Rotate to landscape for automatic fullscreen mode and optimal gaming experience
         </div>
       )}
 
